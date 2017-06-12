@@ -1,0 +1,22 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: opa
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: opa
+    spec:
+      containers:
+      - name: opa
+        image: openpolicyagent/opa:0.4.10
+        args:
+        - "run"
+        - "--server"
+        ports:
+        - name: http
+          containerPort: 8181
+      - name: sidecar
+        image: openpolicyagent/kube-mgmt:0.1-dev

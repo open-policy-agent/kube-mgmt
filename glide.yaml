@@ -1,0 +1,6 @@
+package: github.com/open-policy-agent/kube-mgmt
+import:
+- package: github.com/Sirupsen/logrus
+  version: v0.11.4
+- package: k8s.io/client-go
+  version: v2.0.0
