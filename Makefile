@@ -43,3 +43,10 @@ deploy:
 .PHONY: up
 up: image undeploy deploy
 
+.PHONY: push
+push:
+	docker push $(IMAGE):$(VERSION)
+
+.PHONY: push-latest
+push-latest:
+	docker push $(IMAGE):latest
