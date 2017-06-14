@@ -19,4 +19,4 @@ spec:
         - name: http
           containerPort: 8181
       - name: sidecar
-        image: openpolicyagent/kube-mgmt:0.1
+        image: openpolicyagent/kube-mgmt:0.2
