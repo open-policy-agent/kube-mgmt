@@ -50,3 +50,6 @@ push:
 .PHONY: push-latest
 push-latest:
 	docker push $(IMAGE):latest
+
+version:
+	@echo $(VERSION)

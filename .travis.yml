@@ -8,7 +8,7 @@ after_success:
 - source ./build/travis-utils.sh
 - if is_travis_push_env; then docker login -u $DOCKER_USER -p $DOCKER_PASSWORD; fi
 - if is_travis_push_env; then make push; fi
-- if is_travis_release-env; then make push-latest; fi
+- if is_travis_release_env; then make push-latest; fi
 env:
   global:
   - secure: d+SsriniNhjNHyTDqFYWYKbDl3nW46x1X3N/Tp6uxcegP/OPqJqzaBHVj3+BzO88oSQ95wBJ5wArsB2ysX8Ap08ylDJwzOLg2tl9XaTa7Ie0M30trj+t5uRx/wltcw0U47eW1mzWSdf++dirVoSwVvX3pRPxvNa0WjwAUyMtYuZDUwy8kJp6OVpKquDc3MWZvLtpMfZG8egGWqUKE2vuBHTnY0r+EQcPFVJIefmEeF08COKjrGOYYAT0Hbl81tPoST2pxIR7INDmqbgOQ/aL/Uf9KRyZqkxPUV5NXy9kcnZE36gWclW1r75zSbX2mMbIXa0YHzCcljCsmNeMC0c1mIjontWjHYKf7dLeJkk8heEiSJF2FvsA7iez3lwDcd65ZJV2e/LXjJ4BXdQGEkCX9qhNavXqoNQyzP1jm/SuV4YdXfk7Eq8IFFT3SOai/jqP0uoFqiLuLhPW/wbeK03wEI+rOigvfuYQ1qCSlMs+yebHczD78syBxiTnx0Ns2exq+TGORBSazXxqyAZXNskYM8YdPqpQW4GJ+0vytL3dpKf4lraF2duZxXpZSlVpZMMrKpd3YbkvHm8lEwWJfLvIoZumw96hTVAoKUSTzK9h+gI0v64vP9fjKKEFjYxR5v7TNZtTNSP4VXUIHUNUa+2Yn5u1XdEHgLl9UKptBOs8/XM=
