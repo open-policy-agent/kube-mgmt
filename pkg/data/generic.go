@@ -9,13 +9,11 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	opa_client "github.com/open-policy-agent/kube-mgmt/pkg/opa"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/pkg/api"
-	"k8s.io/client-go/pkg/api/unversioned"
-	// Required to register federation/v1beta1 types.
-	_ "k8s.io/client-go/pkg/federation/apis/federation/install"
-	"k8s.io/client-go/pkg/fields"
-	"k8s.io/client-go/pkg/runtime"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 )
@@ -43,7 +41,7 @@ func New(kubeconfig *rest.Config, opa opa_client.Data, ns Namespace) *GenericSyn
 	} else {
 		cpy.APIPath = "/apis"
 	}
-	cpy.GroupVersion = &unversioned.GroupVersion{
+	cpy.GroupVersion = &schema.GroupVersion{
 		Group:   ns.Group,
 		Version: ns.Version,
 	}
@@ -70,7 +68,7 @@ func (s *GenericSync) Run() (chan struct{}, error) {
 		fields.Everything())
 	store, controller := cache.NewInformer(
 		source,
-		&runtime.Unstructured{},
+		&unstructured.Unstructured{},
 		time.Second*60,
 		cache.ResourceEventHandlerFuncs{
 			AddFunc:    s.syncAdd,
@@ -89,7 +87,7 @@ func (s *GenericSync) update(_, obj interface{}) {
 }
 
 func (s *GenericSync) syncAdd(obj interface{}) {
-	u := obj.(*runtime.Unstructured)
+	u := obj.(*unstructured.Unstructured)
 	name := u.GetName()
 	var path = u.GetName()
 	if s.ns.Namespaced {
@@ -101,7 +99,7 @@ func (s *GenericSync) syncAdd(obj interface{}) {
 }
 
 func (s *GenericSync) syncRemove(obj interface{}) {
-	u := obj.(*runtime.Unstructured)
+	u := obj.(*unstructured.Unstructured)
 	name := u.GetName()
 	var path = u.GetName()
 	if s.ns.Namespaced {

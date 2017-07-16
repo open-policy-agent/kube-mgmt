@@ -10,12 +10,12 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	"github.com/open-policy-agent/kube-mgmt/pkg/opa"
+	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/client-go/pkg/api"
-	"k8s.io/client-go/pkg/api/unversioned"
 	"k8s.io/client-go/pkg/api/v1"
-	"k8s.io/client-go/pkg/fields"
-	"k8s.io/client-go/pkg/runtime"
-	"k8s.io/client-go/pkg/runtime/serializer"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 )
@@ -37,7 +37,7 @@ type ConfigMapSync struct {
 // New returns a new ConfigMapSync that can be started.
 func New(kubeconfig *rest.Config, opa opa.Policies) *ConfigMapSync {
 	cpy := *kubeconfig
-	cpy.GroupVersion = &unversioned.GroupVersion{
+	cpy.GroupVersion = &schema.GroupVersion{
 		Version: "v1",
 	}
 	cpy.APIPath = "/api"
