@@ -29,10 +29,10 @@ This project provides a sidecar container to manage the [Open Policy Agent](http
 1. Add a label to the ConfigMap:
 
     ```bash
-    kubectl -n opa label configmap hello-world org.openpolicyagent/policy=rego
+    kubectl -n opa label configmap hello-world openpolicyagent.org/policy=rego
     ```
 
-    > By default, the sidecar synchronizes policies stored in ConfigMaps labeled with `org.openpolicyagent/policy=rego`.
+    > By default, the sidecar synchronizes policies stored in ConfigMaps labeled with `openpolicyagent.org/policy=rego`.
 
 1. Create a Service to expose OPA:
 

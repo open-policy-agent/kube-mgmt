@@ -24,8 +24,8 @@ import (
 )
 
 const (
-	policyLabelKey       = "org.openpolicyagent/policy"
-	errorLabelKey        = "org.openpolicyagent/policy-error"
+	policyLabelKey       = "openpolicyagent.org/policy"
+	errorLabelKey        = "openpolicyagent.org/policy-error"
 	policyLabelValueRego = "rego"
 
 	// Special namespace in Kubernetes federation that holds scheduling policies.
