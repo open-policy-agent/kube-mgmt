@@ -145,6 +145,40 @@ spec:
     targetPort: 8181
 ```
 
+You must define a policy that produces a document at `/data/system/main`. The following policy will allow all operations:
+
+```ruby
+package system
+
+main = {
+  "apiVersion": "admission.k8s.io/v1alpha1",
+  "kind": "AdmissionReview",
+  "status": status
+}
+
+default status = {
+  "allowed": true
+}
+```
+
+To test that the policy is working, define a status rule that rejects the request if the `test-reject` label is found:
+
+```
+package system
+
+status = reject {
+  input.spec.operation = "CREATE"
+  input.spec.object.labels["test-reject"]
+}
+
+reject = {
+  "allowed": false,
+  "status": {
+    "reason": "testing rejection"
+  }
+}
+```
+
 ### <a name="generating-tls-certificates" />Generating TLS Certificates
 
 <!-- TODO-->
