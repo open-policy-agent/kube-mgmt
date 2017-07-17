@@ -9,6 +9,7 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	opa_client "github.com/open-policy-agent/kube-mgmt/pkg/opa"
+	"github.com/open-policy-agent/kube-mgmt/pkg/types"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -18,23 +19,15 @@ import (
 	"k8s.io/client-go/tools/cache"
 )
 
-// Namespace contains configuration for GenericSync objects.
-type Namespace struct {
-	Namespaced bool
-	Resource   string
-	Group      string
-	Version    string
-}
-
 // GenericSync replicates Kubernetes resources into OPA as raw JSON.
 type GenericSync struct {
 	kubeconfig *rest.Config
 	opa        opa_client.Data
-	ns         Namespace
+	ns         types.ResourceType
 }
 
 // New returns a new GenericSync that cna be started.
-func New(kubeconfig *rest.Config, opa opa_client.Data, ns Namespace) *GenericSync {
+func New(kubeconfig *rest.Config, opa opa_client.Data, ns types.ResourceType) *GenericSync {
 	cpy := *kubeconfig
 	if ns.Group == "" {
 		cpy.APIPath = "/api"

@@ -17,6 +17,7 @@ import (
 	"github.com/open-policy-agent/kube-mgmt/pkg/data"
 	"github.com/open-policy-agent/kube-mgmt/pkg/opa"
 	"github.com/open-policy-agent/kube-mgmt/pkg/policies"
+	"github.com/open-policy-agent/kube-mgmt/pkg/types"
 	versionpkg "github.com/open-policy-agent/kube-mgmt/pkg/version"
 )
 
@@ -73,7 +74,7 @@ func main() {
 		sync := data.New(
 			kubeconfig,
 			opa.New(*opaURL).Prefix(*dataRoot),
-			data.Namespace{
+			types.ResourceType{
 				Group:      gvk.Group,
 				Version:    gvk.Version,
 				Resource:   gvk.Kind,
@@ -89,7 +90,7 @@ func main() {
 		sync := data.New(
 			kubeconfig,
 			opa.New(*opaURL).Prefix(*dataRoot),
-			data.Namespace{
+			types.ResourceType{
 				Group:      gvk.Group,
 				Version:    gvk.Version,
 				Resource:   gvk.Kind,
