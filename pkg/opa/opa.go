@@ -31,6 +31,13 @@ func (Undefined) Error() string {
 	return fmt.Sprintf("undefined")
 }
 
+// IsUndefinedErr returns true if the err represents an undefined result from
+// OPA.
+func IsUndefinedErr(err error) bool {
+	_, ok := err.(Undefined)
+	return ok
+}
+
 // Client defines the OPA client interface.
 type Client interface {
 	Policies

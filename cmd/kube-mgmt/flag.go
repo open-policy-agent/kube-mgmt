@@ -19,7 +19,10 @@ type groupVersionKind struct {
 var errBadFormat = errors.New("format: group/version/kind")
 
 func (gvk groupVersionKind) String() string {
-	return fmt.Sprintf("%v/%v/%v", gvk.Group, gvk.Version, gvk.Kind)
+	if gvk.Group != "" {
+		return fmt.Sprintf("%v/%v/%v", gvk.Group, gvk.Version, gvk.Kind)
+	}
+	return fmt.Sprintf("%v/%v", gvk.Version, gvk.Kind)
 }
 
 func (gvk *groupVersionKind) Parse(value string) error {
