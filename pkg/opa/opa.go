@@ -24,6 +24,13 @@ func (err *Error) Error() string {
 	return fmt.Sprintf("code %v: %v", err.Code, err.Message)
 }
 
+// Undefined represents an undefined response from OPA.
+type Undefined struct{}
+
+func (Undefined) Error() string {
+	return fmt.Sprintf("undefined")
+}
+
 // Client defines the OPA client interface.
 type Client interface {
 	Policies
@@ -41,6 +48,7 @@ type Data interface {
 	Prefix(path string) Data
 	PatchData(path string, op string, value interface{}) error
 	PutData(path string, value interface{}) error
+	PostData(path string, value interface{}) (json.RawMessage, error)
 }
 
 // New returns a new Client object.
@@ -104,6 +112,39 @@ func (c *httpClient) PutData(path string, value interface{}) error {
 		return err
 	}
 	return c.handleErrors(resp)
+}
+
+func (c *httpClient) PostData(path string, value interface{}) (json.RawMessage, error) {
+	var prefix = "/"
+	if c.prefix != "" {
+		prefix = "/" + c.prefix
+	}
+	var buf bytes.Buffer
+	var input struct {
+		Input interface{} `json:"input"`
+	}
+	input.Input = value
+	if err := json.NewEncoder(&buf).Encode(input); err != nil {
+		return nil, err
+	}
+	resp, err := c.do("POST", "/data"+prefix+"/"+strings.Trim(path, "/"), &buf)
+	if err != nil {
+		return nil, err
+	}
+	var result struct {
+		Result json.RawMessage        `json:"result"`
+		Error  map[string]interface{} `json:"error"`
+	}
+	if resp.StatusCode != 200 {
+		return nil, c.handleErrors(resp)
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return nil, err
+	}
+	if result.Result == nil {
+		return nil, Undefined{}
+	}
+	return result.Result, nil
 }
 
 func (c *httpClient) InsertPolicy(id string, bs []byte) error {
