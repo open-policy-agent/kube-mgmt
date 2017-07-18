@@ -25,7 +25,7 @@ import (
 
 const (
 	policyLabelKey       = "openpolicyagent.org/policy"
-	errorLabelKey        = "openpolicyagent.org/policy-error"
+	statusAnnotationKey  = "openpolicyagent.org/policy-status"
 	policyLabelValueRego = "rego"
 
 	// Special namespace in Kubernetes federation that holds scheduling policies.
@@ -137,8 +137,14 @@ func (s *ConfigMapSync) syncAdd(cm *v1.ConfigMap) {
 	for key, value := range cm.Data {
 		id := fmt.Sprintf("%v/%v", path, key)
 		if err := s.opa.InsertPolicy(id, []byte(value)); err != nil {
-			s.setErrorAnnotation(cm, err)
-			continue
+			s.setStatusAnnotation(cm, status{
+				Status: "error",
+				Error:  err,
+			})
+		} else {
+			s.setStatusAnnotation(cm, status{
+				Status: "ok",
+			})
 		}
 	}
 }
@@ -149,30 +155,33 @@ func (s *ConfigMapSync) syncRemove(cm *v1.ConfigMap) {
 		id := fmt.Sprintf("%v/%v", path, key)
 		if err := s.opa.DeletePolicy(id); err != nil {
 			logrus.Errorf("Failed to delete policy %v: %v", id, err)
-			continue
 		}
 	}
 }
 
-func (s *ConfigMapSync) setErrorAnnotation(cm *v1.ConfigMap, err error) {
-	errBytes, err2 := json.Marshal(err)
+func (s *ConfigMapSync) setStatusAnnotation(cm *v1.ConfigMap, st status) {
+	bs, err := json.Marshal(st)
 	if err != nil {
-		logrus.Errorf("Failed to serialize OPA error for %v/%v: %v", cm.Namespace, cm.Name, err2)
+		logrus.Errorf("Failed to serialize %v for %v/%v: %v", statusAnnotationKey, cm.Namespace, cm.Name, err)
 	}
 	patch := map[string]interface{}{
 		"metadata": map[string]interface{}{
 			"annotations": map[string]interface{}{
-				errorLabelKey: string(errBytes),
+				statusAnnotationKey: string(bs),
 			},
 		},
 	}
-	bs, err2 := json.Marshal(patch)
-	if err2 != nil {
-		logrus.Errorf("Failed to serialize error patch for %v/%v: %v", cm.Namespace, cm.Name, err2)
+	bs, err = json.Marshal(patch)
+	if err != nil {
+		logrus.Errorf("Failed to serialize patch for %v/%v: %v", cm.Namespace, cm.Name, err)
 	}
-	fmt.Println(string(bs))
-	_, err2 = s.clientset.ConfigMaps(cm.Namespace).Patch(cm.Name, types.StrategicMergePatchType, bs)
-	if err2 != nil {
-		logrus.Errorf("Failed to update error for %v/%v: %v (err: %v)", cm.Namespace, cm.Name, err2, err)
+	_, err = s.clientset.ConfigMaps(cm.Namespace).Patch(cm.Name, types.StrategicMergePatchType, bs)
+	if err != nil {
+		logrus.Errorf("Failed to %v for %v/%v: %v", statusAnnotationKey, cm.Namespace, cm.Name, err)
 	}
+}
+
+type status struct {
+	Status string `json:"status"`
+	Error  error  `json:"error,omitempty"`
 }
