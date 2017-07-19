@@ -37,10 +37,11 @@ type ConfigMapSync struct {
 	kubeconfig *rest.Config
 	opa        opa.Policies
 	clientset  *kubernetes.Clientset
+	namespaces []string
 }
 
 // New returns a new ConfigMapSync that can be started.
-func New(kubeconfig *rest.Config, opa opa.Policies) *ConfigMapSync {
+func New(kubeconfig *rest.Config, opa opa.Policies, namespaces []string) *ConfigMapSync {
 	cpy := *kubeconfig
 	cpy.GroupVersion = &schema.GroupVersion{
 		Version: "v1",
@@ -60,6 +61,7 @@ func New(kubeconfig *rest.Config, opa opa.Policies) *ConfigMapSync {
 	return &ConfigMapSync{
 		kubeconfig: &cpy,
 		opa:        opa,
+		namespaces: namespaces,
 	}
 }
 
@@ -129,7 +131,12 @@ func (s *ConfigMapSync) matchLabel(cm *v1.ConfigMap) bool {
 }
 
 func (s *ConfigMapSync) matchNamespace(cm *v1.ConfigMap) bool {
-	return cm.Namespace == kubeFederationSchedulingPolicy
+	for _, ns := range s.namespaces {
+		if cm.Namespace == ns {
+			return true
+		}
+	}
+	return false
 }
 
 func (s *ConfigMapSync) syncAdd(cm *v1.ConfigMap) {

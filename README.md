@@ -19,9 +19,9 @@ Policy-based control for Kubernetes deployments.
 
 1. Create a new Namespace to deploy OPA into:
 
-  ```bash
-  kubectl create namespace opa
-  ```
+    ```bash
+    kubectl create namespace opa
+    ```
 
 1. Create a new Deployment that includes OPA and `kube-mgmt` (`manifests/deployment.yml`):
 
@@ -43,12 +43,6 @@ Policy-based control for Kubernetes deployments.
     kubectl -n opa create configmap hello-world --from-file example.rego
     ```
 
-1. Add a label to the ConfigMap:
-
-    ```bash
-    kubectl -n opa label configmap hello-world openpolicyagent.org/policy=rego
-    ```
-
 1. Create a Service to expose OPA:
 
     ```bash
@@ -65,10 +59,13 @@ Policy-based control for Kubernetes deployments.
 ### Policies
 
 `kube-mgmt` automatically discovers policies stored in ConfigMaps in Kubernetes
-and loads them into OPA.
+and loads them into OPA. `kube-mgmt` assumes a ConfigMap contains policies if
+the ConfigMap is:
 
-Any ConfigMaps labelled with `openpolicyagent.org/policy=rego` are loaded into
-OPA. When a policy has been successfully loaded into OPA, the
+- Created in a namespace listed in the --policies option.
+- Labelled with `openpolicyagent.org/policy=rego`.
+
+When a policy has been successfully loaded into OPA, the
 `openpolicyagent.org/policy-status` annotation is set to `{"status": "ok"}`.
 
 If loading fails for some reason (e.g., because of a parse error), the

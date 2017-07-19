@@ -27,10 +27,11 @@ type params struct {
 	version                             bool
 	kubeconfigFile                      string
 	opaURL                              string
+	policies                            []string
 	replicateCluster                    gvkFlag
 	replicateNamespace                  gvkFlag
 	replicatePath                       string
-	registerAdmissionControllers        bool
+	registerAdmissionController         bool
 	admissionControllerName             string
 	admissionControllerCACertFile       string
 	admissionControllerServiceName      string
@@ -65,12 +66,13 @@ func main() {
 	rootCmd.Flags().StringVarP(&params.opaURL, "opa-url", "", "http://localhost:8181/v1", "set URL of OPA API endpoint")
 
 	// Replication options.
+	rootCmd.Flags().StringSliceVarP(&params.policies, "policies", "", []string{"opa", "kube-federation-scheduling-policy"}, "automatically load policies from these namespaces")
 	rootCmd.Flags().VarP(&params.replicateNamespace, "replicate", "", "replicate namespace-level resources")
 	rootCmd.Flags().VarP(&params.replicateCluster, "replicate-cluster", "", "replicate cluster-level resources")
 	rootCmd.Flags().StringVarP(&params.replicatePath, "replicate-path", "", "kubernetes", "set path to replicate data into")
 
 	// Admission control options.
-	rootCmd.Flags().BoolVarP(&params.registerAdmissionControllers, "register-admission-controller", "", false, "register OPA as an admission controller")
+	rootCmd.Flags().BoolVarP(&params.registerAdmissionController, "register-admission-controller", "", false, "register OPA as an admission controller")
 	rootCmd.Flags().StringVarP(&params.admissionControllerName, "admission-controller-name", "", "admission.openpolicyagent.org", "set name of OPA admission controller")
 	rootCmd.Flags().StringVarP(&params.admissionControllerCACertFile, "admission-controller-ca-cert-file", "", "", "set path of admission control CA certificate file")
 	rootCmd.Flags().StringVarP(&params.admissionControllerServiceName, "admission-controller-service-name", "", "opa", "set name of admission control service")
@@ -97,7 +99,7 @@ func run(params *params) {
 		logrus.Fatalf("Failed to load kubeconfig: %v", err)
 	}
 
-	sync := policies.New(kubeconfig, opa.New(params.opaURL))
+	sync := policies.New(kubeconfig, opa.New(params.opaURL), params.policies)
 	_, err = sync.Run()
 	if err != nil {
 		logrus.Fatalf("Failed to start policy sync: %v", err)
@@ -137,7 +139,7 @@ func run(params *params) {
 		}
 	}
 
-	if params.registerAdmissionControllers {
+	if params.registerAdmissionController {
 		if err := admission.InstallDefaultAdmissionPolicy("default-system-main", opa.New(params.opaURL)); err != nil {
 			logrus.Fatalf("Failed to install default policy: %v", err)
 		}
