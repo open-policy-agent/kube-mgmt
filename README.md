@@ -1,4 +1,4 @@
-# kube-mgmt
+# ![logo](./logo/logo.png) kube-mgmt
 
 Policy-based control for Kubernetes deployments.
 
