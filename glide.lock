@@ -1,5 +1,5 @@
-hash: b09f8aff3a5c530b3849a6bdb2718b86a0b614b3b2d1ec277d8bd4e200b9e253
-updated: 2017-07-16T11:41:32.661823298-07:00
+hash: 2379c83d8a46bae473a72c0629d29c8c0d1167c82386448449e51c48fcb407d4
+updated: 2017-07-19T08:37:06.990200404-07:00
 imports:
 - name: github.com/davecgh/go-spew
   version: 5215b55f46b2b919f50a1df0eaa5886afe4e3b3d
@@ -47,6 +47,8 @@ imports:
   version: bf9dde6d0d2c004a008c27aaee91170c786f6db8
 - name: github.com/imdario/mergo
   version: 6633656539c1639d9d78127b7d47c622b5d7b6dc
+- name: github.com/inconshreveable/mousetrap
+  version: 76626ae9c91c4f2a10f34cad8ce83ea42c93bb75
 - name: github.com/juju/ratelimit
   version: 5b9ff866471762aa2ab2dced63c9fb6f53921342
 - name: github.com/mailru/easyjson
@@ -61,8 +63,10 @@ imports:
   version: 5bd2802263f21d8788851d5305584c82a5c75d7e
 - name: github.com/Sirupsen/logrus
   version: 0208149b40d863d2c1a2f8fe5753096a9cf2cc8b
+- name: github.com/spf13/cobra
+  version: 715f41bd7a70b5111f898b71ab484da52ee6266d
 - name: github.com/spf13/pflag
-  version: 9ff6c6923cfffbcd502984b8e0c80539a94968b7
+  version: e57e3eeb33f795204c1ca35f56c44f83227c6e66
 - name: github.com/ugorji/go
   version: ded73eae5db7e7a0ef6f55aace87a2873c5d2b74
   subpackages:
@@ -81,7 +85,7 @@ imports:
   - idna
   - lex/httplex
 - name: golang.org/x/sys
-  version: 4cd6d1a821c7175768725b55ca82f14683a29ea4
+  version: cd2c276457edda6df7fb04895d3fd6a6add42926
   subpackages:
   - unix
 - name: golang.org/x/text

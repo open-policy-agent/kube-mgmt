@@ -4,3 +4,4 @@ import:
   version: v0.11.4
 - package: k8s.io/client-go
   version: v4.0.0-beta.0
+- package: github.com/spf13/cobra
