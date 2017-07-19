@@ -100,8 +100,8 @@ spec:
             - "--server"
             - "--tls-cert-file=/certs/tls.crt"
             - "--tls-private-key-file=/certs/tls.key"
-            - "--addr=0.0.0.0:8181"
-            - "--insecure-addr=127.0.0.1:8282"
+            - "--addr=0.0.0.0:443"
+            - "--insecure-addr=127.0.0.1:8181"
           volumeMounts:
             - readOnly: true
               mountPath: /certs
@@ -109,7 +109,7 @@ spec:
         - name: kube-mgmt
           image: openpolicyagent/kube-mgmt:0.3
           args:
-            - "-opa=http://127.0.0.1:8282/v1"
+            - "-opa=http://127.0.0.1:8181/v1"
             - "-enable-admission-control"
             - "-admission-ca-cert-file=/certs/ca.pem"
             - "-admission-service-name=opa"
@@ -136,16 +136,18 @@ apiVersion: v1
 metadata:
   name: opa
 spec:
+  clusterIP: 10.0.0.222
   selector:
     app: opa
   ports:
   - name: https
     protocol: TCP
-    port: 8181
-    targetPort: 8181
+    port: 443
+    targetPort: 443
 ```
 
-You must define a policy that produces a document at `/data/system/main`. The following policy will allow all operations:
+You must create a policy that produces a document at `/data/system/main`. The
+following policy will allow all operations:
 
 ```ruby
 package system
@@ -161,7 +163,10 @@ default status = {
 }
 ```
 
-To test that the policy is working, define a status rule that rejects the request if the `test-reject` label is found:
+### Example Policy
+
+To test that the policy is working, define a status rule that rejects the
+request if the `test-reject` label is found:
 
 ```
 package system
@@ -181,7 +186,173 @@ reject = {
 
 ### <a name="generating-tls-certificates" />Generating TLS Certificates
 
-<!-- TODO-->
+External Admission Controllers must be secured with TLS. At a minimum you must:
+
+- Provide the Kubernetes API server with a client key to use for
+  webhook calls.
+
+- Provide OPA with a server key so that the Kubernetes API server can
+  authenticate it.
+
+- Provide `kube-mgmt` with the CA certificate to register with the Kubernetes
+  API server.
+
+Follow the steps below to generate the necessary files for test purposes.
+
+First, generate create the required OpenSSL configuration files:
+
+**client.conf**:
+
+```
+[req]
+req_extensions = v3_req
+distinguished_name = req_distinguished_name
+[req_distinguished_name]
+[ v3_req ]
+basicConstraints = CA:FALSE
+keyUsage = nonRepudiation, digitalSignature, keyEncipherment
+extendedKeyUsage = clientAuth, serverAuth
+subjectAltName = @alt_names
+[alt_names]
+IP.1 = 127.0.0.1
+```
+
+**server.conf**:
+
+```
+[req]
+req_extensions = v3_req
+distinguished_name = req_distinguished_name
+[req_distinguished_name]
+[ v3_req ]
+basicConstraints = CA:FALSE
+keyUsage = nonRepudiation, digitalSignature, keyEncipherment
+extendedKeyUsage = clientAuth, serverAuth
+subjectAltName = @alt_names
+[alt_names]
+IP.1 = 10.0.0.222
+```
+
+> The subjectAltName/IP address in the certificate MUST match the one configured
+> on the Kubernetes Service.
+
+Finally, generate the CA and client/server key pairs.
+
+```bash
+# Create a certificate authority
+openssl genrsa -out caKey.pem 2048
+openssl req -x509 -new -nodes -key caKey.pem -days 100000 -out caCert.pem -subj
+"/CN=admission_ca"
+
+# Create a server certiticate
+openssl genrsa -out serverKey.pem 2048
+openssl req -new -key serverKey.pem -out server.csr -subj "/CN=admission_server"
+-config server.conf
+openssl x509 -req -in server.csr -CA caCert.pem -CAkey caKey.pem -CAcreateserial
+-out serverCert.pem -days 100000 -extensions v3_req -extfile server.conf
+
+# Create a client certiticate
+openssl genrsa -out clientKey.pem 2048
+openssl req -new -key clientKey.pem -out client.csr -subj "/CN=admission_client"
+-config client.conf
+openssl x509 -req -in client.csr -CA caCert.pem -CAkey caKey.pem -CAcreateserial
+-out clientCert.pem -days 100000 -extensions v3_req -extfile client.conf
+```
+
+## Initializers
+
+Follow the steps in [Initializers]() to use OPA as an initialization controller
+in Kubernetes 1.7 or later.
+
+Once you have configured the Kubernetes API server, you can start `kube-mgmt`
+with the following options:
+
+```bash
+# Enable initializer for given namespace-level resource.
+# May be specified multiple times.
+-initializer-namespace=<[group/]version/resource>
+
+# Enable initializer for given cluster-level resource.
+# May be specified multiple times.
+-initializer-cluster=<[group/]version/resource>
+
+# Set path of initialization doucment to query.
+# Defaults to /kubernetes/admission/initialize
+-initialization-path=<path-relative-to-/data>
+```
+
+The example below shows how to deploy OPA and enable initializers for
+Deployments and Services:
+
+```
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  labels:
+    app: opa
+  name: opa
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: opa
+      name: opa
+    spec:
+      containers:
+        - name: opa
+          image: openpolicyagent/opa:0.5.2
+          args:
+            - "run"
+            - "--server"
+        - name: kube-mgmt
+          image: openpolicyagent/kube-mgmt:0.3
+          args:
+            - "-initializer-namespace=v1/services"
+            - "-initializer-namespace=apps/v1beta1/deployments"
+      volumes:
+        - name: opa-server
+          secret:
+            secretName: opa-server
+        - name: opa-ca
+          secret:
+            secretName: opa-ca
+```
+
+If initializers are enabled, `kube-mgmt` will register itself as an
+initialization controller on the specified resource type (you do not have to
+create a initializer configuration yourself.)
+
+### Example Policy
+
+The policy below will inject OPA into Deployments that indicate they **require OPA**:
+
+```ruby
+package kubernetes.admission
+
+initialize = merge {
+  input.kind = "Deployment"
+  input.metadata.annotations["requires-opa"]
+  merge = {
+    "spec": {
+      "template": {
+        "spec": {
+          "containers": [
+            {
+              "name": "opa",
+              "image": "openpolicyagent/opa:0.5.2",
+              "args": [
+                "run",
+                "--server",
+              ]
+            }
+          ]
+        }
+      }
+    }
+  }
+}
+```
 
 ## Development Guide
 
