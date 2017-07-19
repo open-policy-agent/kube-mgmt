@@ -61,3 +61,7 @@ func (f *gvkFlag) Set(value string) error {
 	*f = append(*f, gvk)
 	return nil
 }
+
+func (f *gvkFlag) Type() string {
+	return "[group/]version/resource"
+}

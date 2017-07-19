@@ -11,12 +11,12 @@ spec:
     spec:
       containers:
       - name: opa
-        image: openpolicyagent/opa:0.4.10
+        image: openpolicyagent/opa
         args:
         - "run"
         - "--server"
         ports:
         - name: http
           containerPort: 8181
-      - name: sidecar
-        image: openpolicyagent/kube-mgmt:0.3-dev
+      - name: kube-mgmt
+        image: openpolicyagent/kube-mgmt:0.3
