@@ -11,11 +11,40 @@ import (
 
 	"io/ioutil"
 
+	opa_client "github.com/open-policy-agent/kube-mgmt/pkg/opa"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/pkg/apis/admissionregistration/v1alpha1"
 	"k8s.io/client-go/rest"
 )
+
+var (
+	defaultAdmissionPolicy = []byte(`
+		package system
+
+		default main = {
+			"apiVersion": "admission.k8s.io/v1alpha1",
+			"kind": "AdmissionReview",
+			"status": {
+				"allowed": true,
+			},
+		}
+	`)
+)
+
+// InstallDefaultAdmissionPolicy will update OPA with a default policy under
+// system.main to allow all resources. This function will block until the
+// policy has been installed.
+func InstallDefaultAdmissionPolicy(id string, opa opa_client.Policies) error {
+	for {
+		time.Sleep(time.Second * 1)
+		if err := opa.InsertPolicy(id, defaultAdmissionPolicy); err != nil {
+			logrus.Errorf("Failed to install default policy: %v", err)
+		} else {
+			return nil
+		}
+	}
+}
 
 // Register attempts to register an admission control webhook with the given CA
 // certificate, service name/namespace, etc.

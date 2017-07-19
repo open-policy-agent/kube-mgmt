@@ -120,6 +120,9 @@ func main() {
 	}
 
 	if *enableAdmissionControl {
+		if err := admission.InstallDefaultAdmissionPolicy("default-system-main", opa.New(*opaURL)); err != nil {
+			logrus.Fatalf("Failed to install default policy: %v", err)
+		}
 		err := admission.Register(kubeconfig, *admissionWebhookName, *admissionCACertFile, *admissionServiceName, *admissionServiceNamespace, nil)
 		if err != nil {
 			logrus.Fatalf("Failed to start admission registration: %v", err)
