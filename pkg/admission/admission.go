@@ -88,7 +88,7 @@ func Register(kubeconfig *rest.Config, webhookName, caCertFile, serviceName, ser
 								Rule: v1alpha1.Rule{
 									APIGroups:   []string{"*"},
 									APIVersions: []string{"*"},
-									Resources:   []string{"*"},
+									Resources:   []string{"*/*"},
 								},
 							}},
 							ClientConfig: v1alpha1.AdmissionHookClientConfig{
