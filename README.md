@@ -285,22 +285,17 @@ Finally, generate the CA and client/server key pairs.
 ```bash
 # Create a certificate authority
 openssl genrsa -out ca.key 2048
-openssl req -x509 -new -nodes -key ca.key -days 100000 -out ca.crt -subj
-"/CN=admission_ca"
+openssl req -x509 -new -nodes -key ca.key -days 100000 -out ca.crt -subj "/CN=admission_ca"
 
 # Create a server certiticate
 openssl genrsa -out server.key 2048
-openssl req -new -key server.key -out server.csr -subj "/CN=admission_server"
--config server.conf
-openssl x509 -req -in server.csr -CA ca.crt -CAkey ca.key -CAcreateserial
--out server.crt -days 100000 -extensions v3_req -extfile server.conf
+openssl req -new -key server.key -out server.csr -subj "/CN=admission_server" -config server.conf
+openssl x509 -req -in server.csr -CA ca.crt -CAkey ca.key -CAcreateserial -out server.crt -days 100000 -extensions v3_req -extfile server.conf
 
 # Create a client certiticate
 openssl genrsa -out client.key 2048
-openssl req -new -key client.key -out client.csr -subj "/CN=admission_client"
--config client.conf
-openssl x509 -req -in client.csr -CA ca.crt -CAkey ca.key -CAcreateserial
--out client.crt -days 100000 -extensions v3_req -extfile client.conf
+openssl req -new -key client.key -out client.csr -subj "/CN=admission_client" -config client.conf
+openssl x509 -req -in client.csr -CA ca.crt -CAkey ca.key -CAcreateserial -out client.crt -days 100000 -extensions v3_req -extfile client.conf
 ```
 
 If you are using minikube, you can specify the client TLS credentials with the following `minikube start` options:
