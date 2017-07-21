@@ -1,7 +1,7 @@
 BIN := kube-mgmt
 PKG := github.com/open-policy-agent/kube-mgmt
 REGISTRY ?= openpolicyagent
-VERSION := 0.4
+VERSION := 0.5-dev
 ARCH := amd64
 COMMIT := $(shell ./build/get-build-commit.sh)
 
