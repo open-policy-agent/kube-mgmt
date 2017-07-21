@@ -158,7 +158,7 @@ spec:
               mountPath: /certs
               name: opa-server
         - name: kube-mgmt
-          image: openpolicyagent/kube-mgmt:0.3
+          image: openpolicyagent/kube-mgmt:0.4
           args:
             - "--register-admission-controller"
             - "--admission-controller-ca-cert-file=/certs/ca.crt"
@@ -349,7 +349,7 @@ spec:
             - "run"
             - "--server"
         - name: kube-mgmt
-          image: openpolicyagent/kube-mgmt:0.3
+          image: openpolicyagent/kube-mgmt:0.4
           args:
             - "--initialize=v1/services"
             - "--initialize=apps/v1beta1/deployments"
