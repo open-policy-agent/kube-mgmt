@@ -149,8 +149,7 @@ func run(params *params) {
 		}
 	}
 
-	quit := make(chan struct{})
-	<-quit
+	select {}
 }
 
 func loadRESTConfig(path string) (*rest.Config, error) {
