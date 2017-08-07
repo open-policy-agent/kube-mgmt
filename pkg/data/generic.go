@@ -87,7 +87,7 @@ func (s *GenericSync) syncAdd(obj interface{}) {
 		path = u.GetNamespace() + "/" + name
 	}
 	if err := s.opa.PutData(path, u); err != nil {
-		logrus.Errorf("Failed to update %v", path)
+		logrus.Errorf("Failed to update %v: %v", path, err)
 	}
 }
 
@@ -99,6 +99,6 @@ func (s *GenericSync) syncRemove(obj interface{}) {
 		path = u.GetNamespace() + "/" + name
 	}
 	if err := s.opa.PatchData(path, "remove", nil); err != nil {
-		logrus.Errorf("Failed to remove %v", path)
+		logrus.Errorf("Failed to remove %v: %v", path, err)
 	}
 }
