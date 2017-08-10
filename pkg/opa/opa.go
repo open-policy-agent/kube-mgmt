@@ -56,6 +56,7 @@ type Data interface {
 	PatchData(path string, op string, value interface{}) error
 	PutData(path string, value interface{}) error
 	PostData(path string, value interface{}) (json.RawMessage, error)
+	WatchDataGet(path string) (*http.Response, error)
 }
 
 // New returns a new Client object.
@@ -152,6 +153,24 @@ func (c *httpClient) PostData(path string, value interface{}) (json.RawMessage, 
 		return nil, Undefined{}
 	}
 	return result.Result, nil
+}
+
+func (c *httpClient) WatchDataGet(path string) (*http.Response, error) {
+	var prefix = "/"
+	if c.prefix != "" {
+		prefix = "/" + c.prefix
+	}
+
+	resp, err := c.do("PUT", "/data"+prefix+"/"+strings.Trim(path, "/")+"?watch", nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, c.handleErrors(resp)
+	}
+
+	return resp, nil
 }
 
 func (c *httpClient) InsertPolicy(id string, bs []byte) error {

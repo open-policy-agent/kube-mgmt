@@ -5,6 +5,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"path"
@@ -18,7 +19,9 @@ import (
 	"github.com/open-policy-agent/kube-mgmt/pkg/policies"
 	"github.com/open-policy-agent/kube-mgmt/pkg/types"
 	"github.com/open-policy-agent/kube-mgmt/pkg/version"
+	"github.com/open-policy-agent/kube-mgmt/pkg/violations"
 	"github.com/spf13/cobra"
+	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 )
@@ -40,6 +43,7 @@ type params struct {
 	initializeNamespace                 gvkFlag
 	initializePath                      string
 	initializerSuffix                   string
+	violationDocumentPath               string
 }
 
 func main() {
@@ -83,6 +87,9 @@ func main() {
 	rootCmd.Flags().VarP(&params.initializeCluster, "initialize-cluster", "", "initialize cluster-level resources")
 	rootCmd.Flags().StringVarP(&params.initializePath, "initialize-path", "", "kubernetes/admission/initialize", "set path of initialization policy")
 	rootCmd.Flags().StringVarP(&params.initializerSuffix, "initializer-suffix", "", "initializer.openpolicyagent.org", "set suffix of OPA initialization controllers")
+
+	// Monitoring options.
+	rootCmd.Flags().StringVar(&params.violationDocumentPath, "violation-detecting-document", "", "set path of violation detecting document")
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
@@ -149,8 +156,26 @@ func run(params *params) {
 		}
 	}
 
-	quit := make(chan struct{})
-	<-quit
+	if params.violationDocumentPath != "" {
+		client := opa.New(params.opaURL)
+		resp, err := client.WatchDataGet(params.violationDocumentPath)
+		if err != nil {
+			logrus.WithError(err).Fatal("Failed to watch violation document")
+		}
+
+		decoder := json.NewDecoder(resp.Body)
+		decoder.UseNumber()
+
+		kubeClient, err := kubernetes.NewForConfig(kubeconfig)
+		if err != nil {
+			logrus.WithError(err).Fatal("Failed to setup kube client")
+		}
+		events := kubeClient.Events("opa")
+
+		go violations.Track(decoder, events)
+	}
+
+	select {}
 }
 
 func loadRESTConfig(path string) (*rest.Config, error) {
