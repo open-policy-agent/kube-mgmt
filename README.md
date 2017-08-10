@@ -390,6 +390,55 @@ initialize = merge {
 }
 ```
 
+### Violation Detection
+
+`kube-mgmt` has the ability to watch a provided policy and post updates from it as kubernetes events. A primary use case of this is to write policy over the state of your kubernetes deployment and produce output indicating any violations of your deployment policy. In order to enable this, `kube-mgmt` must be configured to replicate Kubernetes resources into OPA, and then started with the flag `violation-detecting-document=path/to/violation/policy`.  This policy must evaluate to an Array of Objects, each of which takes the form:
+
+```
+{
+    "kind": <string>,
+    "name": <string>,
+    "message": ...,
+}
+```
+
+As denoted above, the `kind` and `name` fields must be `string`s, but the `message` field can be any valid type. The `name` field must also be unique: no two list elements may share it.
+
+As an example, here is a simple policy that checks that all pods and services with the same name are running the same version.
+
+```
+package violation
+
+default violation = [{"kind": "Status", "name": "api-compatible", "message": "Everything is good"}]
+violation = [{"kind": "Status", "name": "api-compatible", "message": "Everything is bad"}] {
+    pod = data.kubernetes.pods["production"][name]
+    service = data.kubernetes.services["production"][name]
+
+    pod.metadata.labels.app = service.metadata.labels.app
+    pod.metadata.labels.version != service.metadata.labels.version
+}
+```
+
+If `kube-mgmt` is configured with the flag `violation-detecting-document=violation/violation`, if all pods and services are running compatible versions, the output of `kubectl get events` will resemble:
+
+```
+LASTSEEN   FIRSTSEEN   COUNT     NAME                   KIND         SUBOBJECT                    TYPE      REASON                   SOURCE                       MESSAGE
+...
+43s        53s         3         api-compatible         Status                                    Normal    violation notification   violation-watch, kube-mgmt   Everything is good
+...
+```
+
+However,  some pods and services are running incompatible versions, the output of `kubectl get events` will resemble:
+
+```
+LASTSEEN   FIRSTSEEN   COUNT     NAME                   KIND         SUBOBJECT                    TYPE      REASON                   SOURCE                       MESSAGE
+...
+43s        53s         3         api-compatible         Status                                    Normal    violation notification   violation-watch, kube-mgmt   Everything is bad
+...
+```
+
+You can tell if a given event is a result of a violation because the source of the event will always be `violation-watch, kube-mgmt`.
+
 ## Development Guide
 
 To run all of the tests and build the Docker image run `make` in this directory.
