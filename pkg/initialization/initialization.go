@@ -35,10 +35,11 @@ type Initializer struct {
 	opa        opa_client.Data
 	client     *rest.RESTClient
 	name       string
+	owner      metav1.OwnerReference
 }
 
 // New returns a new Initializer that can be started.
-func New(kubeconfig *rest.Config, opa opa_client.Data, ns types.ResourceType, name string) *Initializer {
+func New(kubeconfig *rest.Config, opa opa_client.Data, ns types.ResourceType, name string, owner metav1.OwnerReference) *Initializer {
 	cpy := *kubeconfig
 	if ns.Group == "" {
 		cpy.APIPath = "/api"
@@ -55,6 +56,7 @@ func New(kubeconfig *rest.Config, opa opa_client.Data, ns types.ResourceType, na
 		name:       name,
 		ns:         ns,
 		opa:        opa,
+		owner:      owner,
 	}
 }
 
@@ -167,6 +169,9 @@ func (i *Initializer) declare() error {
 		initConfig := &v1alpha1.InitializerConfiguration{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: i.name,
+				OwnerReferences: []metav1.OwnerReference{
+					i.owner,
+				},
 			},
 			Initializers: []v1alpha1.Initializer{
 				{

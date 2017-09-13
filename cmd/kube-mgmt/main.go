@@ -6,6 +6,7 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"path"
 	"strings"
@@ -19,6 +20,8 @@ import (
 	"github.com/open-policy-agent/kube-mgmt/pkg/types"
 	"github.com/open-policy-agent/kube-mgmt/pkg/version"
 	"github.com/spf13/cobra"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 )
@@ -27,6 +30,8 @@ type params struct {
 	version                             bool
 	kubeconfigFile                      string
 	opaURL                              string
+	podName                             string
+	podNamespace                        string
 	policies                            []string
 	replicateCluster                    gvkFlag
 	replicateNamespace                  gvkFlag
@@ -42,6 +47,22 @@ type params struct {
 	initializerSuffix                   string
 }
 
+func (p params) Validate(w io.Writer) bool {
+
+	valid := true
+
+	if (p.InitializersEnabled() || p.registerAdmissionController) && (p.podNamespace == "" || p.podName == "") {
+		fmt.Fprintln(w, "--pod-name and --pod-namespace must specified if deployed as initializer or webhook")
+		valid = false
+	}
+
+	return valid
+}
+
+func (p params) InitializersEnabled() bool {
+	return len(p.initializeCluster) > 0 || len(p.initializeNamespace) > 0
+}
+
 func main() {
 
 	var params params
@@ -51,6 +72,9 @@ func main() {
 		Use:   commandName,
 		Short: fmt.Sprintf("%v manages OPA on top of Kubernetes", commandName),
 		Run: func(cmd *cobra.Command, args []string) {
+			if !params.Validate(os.Stderr) {
+				os.Exit(1)
+			}
 			if params.version {
 				fmt.Println("Version:", version.Version)
 				fmt.Println("Git:", version.Git)
@@ -64,6 +88,8 @@ func main() {
 	rootCmd.Flags().BoolVarP(&params.version, "version", "v", false, "print version and exit")
 	rootCmd.Flags().StringVarP(&params.kubeconfigFile, "kubeconfig", "", "", "set path to kubeconfig manually")
 	rootCmd.Flags().StringVarP(&params.opaURL, "opa-url", "", "http://localhost:8181/v1", "set URL of OPA API endpoint")
+	rootCmd.Flags().StringVarP(&params.podName, "pod-name", "", "", "set pod name (required for admission registration ownership)")
+	rootCmd.Flags().StringVarP(&params.podNamespace, "pod-namespace", "", "", "set pod namespace (required for admission registration ownership)")
 
 	// Replication options.
 	rootCmd.Flags().StringSliceVarP(&params.policies, "policies", "", []string{"opa", "kube-federation-scheduling-policy"}, "automatically load policies from these namespaces")
@@ -121,9 +147,19 @@ func run(params *params) {
 		}
 	}
 
+	var owner metav1.OwnerReference
+
+	if params.InitializersEnabled() || params.registerAdmissionController {
+		var err error
+		owner, err = makeOwnerReference(kubeconfig, params.podName, params.podNamespace)
+		if err != nil {
+			logrus.Fatalf("Failed to make owner reference: %v", err)
+		}
+	}
+
 	for _, gvk := range params.initializeCluster {
 		name := getInitializerName(gvk, params.initializerSuffix)
-		init := initialization.New(kubeconfig, opa.New(params.opaURL).Prefix(params.initializePath), getResourceType(gvk, false), name)
+		init := initialization.New(kubeconfig, opa.New(params.opaURL).Prefix(params.initializePath), getResourceType(gvk, false), name, owner)
 		_, err := init.Run()
 		if err != nil {
 			logrus.Fatalf("Failed to start initializer for %v: %v", gvk, err)
@@ -132,7 +168,7 @@ func run(params *params) {
 
 	for _, gvk := range params.initializeNamespace {
 		name := getInitializerName(gvk, params.initializerSuffix)
-		init := initialization.New(kubeconfig, opa.New(params.opaURL).Prefix(params.initializePath), getResourceType(gvk, true), name)
+		init := initialization.New(kubeconfig, opa.New(params.opaURL).Prefix(params.initializePath), getResourceType(gvk, true), name, owner)
 		_, err := init.Run()
 		if err != nil {
 			logrus.Fatalf("Failed to start initializer for %v: %v", gvk, err)
@@ -143,7 +179,7 @@ func run(params *params) {
 		if err := admission.InstallDefaultAdmissionPolicy("default-system-main", opa.New(params.opaURL)); err != nil {
 			logrus.Fatalf("Failed to install default policy: %v", err)
 		}
-		err := admission.Register(kubeconfig, params.admissionControllerName, params.admissionControllerCACertFile, params.admissionControllerServiceName, params.admissionControllerServiceNamespace, nil)
+		err := admission.Register(kubeconfig, owner, params.admissionControllerName, params.admissionControllerCACertFile, params.admissionControllerServiceName, params.admissionControllerServiceNamespace, nil)
 		if err != nil {
 			logrus.Fatalf("Failed to start admission registration: %v", err)
 		}
@@ -171,4 +207,25 @@ func getResourceType(gvk groupVersionKind, namespaced bool) types.ResourceType {
 		Version:    gvk.Version,
 		Resource:   gvk.Kind,
 	}
+}
+
+func makeOwnerReference(kubeconfig *rest.Config, name, namespace string) (result metav1.OwnerReference, err error) {
+	clientset, err := kubernetes.NewForConfig(kubeconfig)
+	if err != nil {
+		return result, err
+	}
+
+	pod, err := clientset.Pods(namespace).Get(name, metav1.GetOptions{})
+	if err != nil {
+		return result, err
+	}
+
+	result.APIVersion = "v1"
+	result.Kind = "Pod"
+	yes := true
+	result.BlockOwnerDeletion = &yes
+	result.Name = pod.Name
+	result.UID = pod.UID
+
+	return result, nil
 }

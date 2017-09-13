@@ -115,6 +115,8 @@ Kubernetes API server and generated the necessary certificates you can start
 --admission-controller-service-namespace=<namespace-of-opa-service>
 ```
 
+In addition to the command line arguments above, you must provide `--pod-name` and `--pod-namespace` using [Kubernetes' Downward API](https://kubernetes.io/docs/tasks/inject-data-application/downward-api-volume-expose-pod-information/). The example manifest below shows how to set these.
+
 You will need to create Secrets containing the server certificate and private
 key as well as the CA certificate:
 
@@ -160,6 +162,8 @@ spec:
         - name: kube-mgmt
           image: openpolicyagent/kube-mgmt:0.4
           args:
+            - "--pod-name=$(MY_POD_NAME)"
+            - "--pod-namespace=$(MY_POD_NAMESPACE)"
             - "--register-admission-controller"
             - "--admission-controller-ca-cert-file=/certs/ca.crt"
             - "--admission-controller-service-name=opa"
@@ -169,6 +173,10 @@ spec:
               mountPath: /certs
               name: opa-ca
           env:
+            - name: MY_POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
             - name: MY_POD_NAMESPACE
               valueFrom:
                 fieldRef:
@@ -324,8 +332,9 @@ controllers, you can start `kube-mgmt` with the following options:
 --initialize-path=<path-relative-to-/data>
 ```
 
-The example below shows how to deploy OPA and enable initializers for
-Deployments and Services:
+In addition to the command line arguments above, you must provide `--pod-name` and `--pod-namespace` using [Kubernetes' Downward API](https://kubernetes.io/docs/tasks/inject-data-application/downward-api-volume-expose-pod-information/). The example manifest below shows how to set these.
+
+The example below shows how to deploy OPA and enable initializers for Deployments and Services:
 
 ```yaml
 apiVersion: extensions/v1beta1
@@ -351,8 +360,19 @@ spec:
         - name: kube-mgmt
           image: openpolicyagent/kube-mgmt:0.4
           args:
+            - "--pod-name=$(MY_POD_NAME)"
+            - "--pod-namespace=$(MY_POD_NAMESPACE)"
             - "--initialize=v1/services"
             - "--initialize=apps/v1beta1/deployments"
+          env:
+            - name: MY_POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: MY_POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
 ```
 
 If initializers are enabled, `kube-mgmt` will register itself as an

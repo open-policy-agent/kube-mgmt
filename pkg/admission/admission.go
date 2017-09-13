@@ -48,7 +48,7 @@ func InstallDefaultAdmissionPolicy(id string, opa opa_client.Policies) error {
 
 // Register attempts to register an admission control webhook with the given CA
 // certificate, service name/namespace, etc.
-func Register(kubeconfig *rest.Config, webhookName, caCertFile, serviceName, serviceNamespace string, done <-chan struct{}) error {
+func Register(kubeconfig *rest.Config, owner metav1.OwnerReference, webhookName, caCertFile, serviceName, serviceNamespace string, done <-chan struct{}) error {
 
 	clientset, err := kubernetes.NewForConfig(kubeconfig)
 	if err != nil {
@@ -79,6 +79,9 @@ func Register(kubeconfig *rest.Config, webhookName, caCertFile, serviceName, ser
 				webhookConfig := &v1alpha1.ExternalAdmissionHookConfiguration{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: webhookName,
+						OwnerReferences: []metav1.OwnerReference{
+							owner,
+						},
 					},
 					ExternalAdmissionHooks: []v1alpha1.ExternalAdmissionHook{
 						{
