@@ -53,7 +53,7 @@ type Policies interface {
 // Data defines the interface for pushing and querying data in OPA.
 type Data interface {
 	Prefix(path string) Data
-	PatchData(path string, op string, value interface{}) error
+	PatchData(path string, op string, value *interface{}) error
 	PutData(path string, value interface{}) error
 	PostData(path string, value interface{}) (json.RawMessage, error)
 }
@@ -70,35 +70,16 @@ type httpClient struct {
 
 func (c *httpClient) Prefix(path string) Data {
 	cpy := *c
-	prefix := strings.Trim(path, "/")
-	if cpy.prefix != "" {
-		prefix = cpy.prefix + "/" + prefix
-	}
-	cpy.prefix = prefix
+	cpy.prefix = joinPaths("/", c.prefix, path)
 	return &cpy
 }
 
-func (c *httpClient) PatchData(path string, op string, value interface{}) error {
-	var prefix = "/"
-	if c.prefix != "" {
-		prefix = "/" + c.prefix
-	}
-	patch := []struct {
-		Path  string      `json:"path"`
-		Op    string      `json:"op"`
-		Value interface{} `json:"value"`
-	}{
-		{
-			Path:  prefix + strings.Trim(path, "/"),
-			Op:    op,
-			Value: value,
-		},
-	}
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(patch); err != nil {
+func (c *httpClient) PatchData(path string, op string, value *interface{}) error {
+	buf, err := c.makePatch(path, op, value)
+	if err != nil {
 		return err
 	}
-	resp, err := c.do("PUT", "/data", &buf)
+	resp, err := c.do("PATCH", slashPath("data"), buf)
 	if err != nil {
 		return err
 	}
@@ -106,15 +87,12 @@ func (c *httpClient) PatchData(path string, op string, value interface{}) error 
 }
 
 func (c *httpClient) PutData(path string, value interface{}) error {
-	var prefix = "/"
-	if c.prefix != "" {
-		prefix = "/" + c.prefix
-	}
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(value); err != nil {
 		return err
 	}
-	resp, err := c.do("PUT", "/data"+prefix+"/"+strings.Trim(path, "/"), &buf)
+	absPath := slashPath("data", c.prefix, path)
+	resp, err := c.do("PUT", absPath, &buf)
 	if err != nil {
 		return err
 	}
@@ -122,10 +100,6 @@ func (c *httpClient) PutData(path string, value interface{}) error {
 }
 
 func (c *httpClient) PostData(path string, value interface{}) (json.RawMessage, error) {
-	var prefix = "/"
-	if c.prefix != "" {
-		prefix = "/" + c.prefix
-	}
 	var buf bytes.Buffer
 	var input struct {
 		Input interface{} `json:"input"`
@@ -134,7 +108,8 @@ func (c *httpClient) PostData(path string, value interface{}) (json.RawMessage, 
 	if err := json.NewEncoder(&buf).Encode(input); err != nil {
 		return nil, err
 	}
-	resp, err := c.do("POST", "/data"+prefix+"/"+strings.Trim(path, "/"), &buf)
+	absPath := slashPath("data", c.prefix, path)
+	resp, err := c.do("POST", absPath, &buf)
 	if err != nil {
 		return nil, err
 	}
@@ -156,8 +131,8 @@ func (c *httpClient) PostData(path string, value interface{}) (json.RawMessage, 
 
 func (c *httpClient) InsertPolicy(id string, bs []byte) error {
 	buf := bytes.NewBuffer(bs)
-	id = strings.Trim(id, "/")
-	resp, err := c.do("PUT", "/policies/"+id, buf)
+	path := slashPath("policies", id)
+	resp, err := c.do("PUT", path, buf)
 	if err != nil {
 		return err
 	}
@@ -165,12 +140,31 @@ func (c *httpClient) InsertPolicy(id string, bs []byte) error {
 }
 
 func (c *httpClient) DeletePolicy(id string) error {
-	id = strings.Trim(id, "/")
-	resp, err := c.do("DELETE", "/policies/"+id, nil)
+	path := slashPath("policies", id)
+	resp, err := c.do("DELETE", path, nil)
 	if err != nil {
 		return err
 	}
 	return c.handleErrors(resp)
+}
+
+func (c *httpClient) makePatch(path, op string, value *interface{}) (io.Reader, error) {
+	patch := []struct {
+		Path  string       `json:"path"`
+		Op    string       `json:"op"`
+		Value *interface{} `json:"value,omitempty"`
+	}{
+		{
+			Path:  slashPath(c.prefix, path),
+			Op:    op,
+			Value: value,
+		},
+	}
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(patch); err != nil {
+		return nil, err
+	}
+	return &buf, nil
 }
 
 func (c *httpClient) handleErrors(resp *http.Response) error {
@@ -192,4 +186,23 @@ func (c *httpClient) do(verb, path string, body io.Reader) (*http.Response, erro
 		return nil, err
 	}
 	return http.DefaultClient.Do(req)
+}
+
+func slashPath(paths ...string) string {
+	return makePath("/", paths...)
+}
+
+func makePath(join string, paths ...string) string {
+	return join + joinPaths(join, paths...)
+}
+
+func joinPaths(join string, paths ...string) string {
+	parts := []string{}
+	for _, path := range paths {
+		path = strings.Trim(path, join)
+		if path != "" {
+			parts = append(parts, path)
+		}
+	}
+	return strings.Join(parts, join)
 }
