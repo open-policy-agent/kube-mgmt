@@ -26,6 +26,12 @@ type GenericSync struct {
 	ns         types.ResourceType
 }
 
+const (
+	resyncPeriod        = time.Second * 60
+	syncResetBackoffMin = time.Second
+	syncResetBackoffMax = time.Second * 30
+)
+
 // New returns a new GenericSync that cna be started.
 func New(kubeconfig *rest.Config, opa opa_client.Data, ns types.ResourceType) *GenericSync {
 	cpy := *kubeconfig
@@ -62,7 +68,7 @@ func (s *GenericSync) Run() (chan struct{}, error) {
 	store, controller := cache.NewInformer(
 		source,
 		&unstructured.Unstructured{},
-		time.Second*60,
+		resyncPeriod,
 		cache.ResourceEventHandlerFuncs{
 			AddFunc:    s.syncAdd,
 			UpdateFunc: s.update,
@@ -87,7 +93,8 @@ func (s *GenericSync) syncAdd(obj interface{}) {
 		path = u.GetNamespace() + "/" + name
 	}
 	if err := s.opa.PutData(path, u); err != nil {
-		logrus.Errorf("Failed to update %v: %v", path, err)
+		logrus.Errorf("Failed to add or update %v/%v (will reset OPA data and resync in %v): %v", s.ns, path, resyncPeriod, err)
+		s.syncReset()
 	}
 }
 
@@ -99,6 +106,23 @@ func (s *GenericSync) syncRemove(obj interface{}) {
 		path = u.GetNamespace() + "/" + name
 	}
 	if err := s.opa.PatchData(path, "remove", nil); err != nil {
-		logrus.Errorf("Failed to remove %v: %v", path, err)
+		logrus.Errorf("Failed to remove %v/%v (will reset OPA data and resync in %v): %v", s.ns, path, resyncPeriod, err)
+		s.syncReset()
+	}
+}
+
+func (s *GenericSync) syncReset() {
+	d := syncResetBackoffMin
+	for {
+		if err := s.opa.PutData("/", map[string]interface{}{}); err != nil {
+			logrus.Errorf("Failed to reset OPA data for %v (will retry after %v): %v", s.ns, d, err)
+		} else {
+			return
+		}
+		time.Sleep(d)
+		d = d * 2
+		if d > syncResetBackoffMax {
+			d = syncResetBackoffMax
+		}
 	}
 }

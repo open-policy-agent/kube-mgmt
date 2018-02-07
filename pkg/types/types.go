@@ -5,6 +5,8 @@
 // Package types contains type information used by controllers.
 package types
 
+import "strings"
+
 // ResourceType describes a resource type in Kubernetes.
 type ResourceType struct {
 	// Namespaced indicates if this kind is namespaced.
@@ -12,4 +14,18 @@ type ResourceType struct {
 	Resource   string
 	Group      string
 	Version    string
+}
+
+func (t ResourceType) String() string {
+	parts := []string{}
+	if t.Group != "" {
+		parts = append(parts, t.Group)
+	}
+	if t.Version != "" {
+		parts = append(parts, t.Version)
+	}
+	if t.Resource != "" {
+		parts = append(parts, t.Resource)
+	}
+	return strings.Join(parts, "/")
 }
