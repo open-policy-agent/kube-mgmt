@@ -160,7 +160,7 @@ spec:
               mountPath: /certs
               name: opa-server
         - name: kube-mgmt
-          image: openpolicyagent/kube-mgmt:0.5
+          image: openpolicyagent/kube-mgmt:0.6
           args:
             - "--pod-name=$(MY_POD_NAME)"
             - "--pod-namespace=$(MY_POD_NAMESPACE)"
@@ -358,7 +358,7 @@ spec:
             - "run"
             - "--server"
         - name: kube-mgmt
-          image: openpolicyagent/kube-mgmt:0.5
+          image: openpolicyagent/kube-mgmt:0.6
           args:
             - "--pod-name=$(MY_POD_NAME)"
             - "--pod-namespace=$(MY_POD_NAMESPACE)"
