@@ -32,16 +32,40 @@ const (
 	kubeFederationSchedulingPolicy = "kube-federation-scheduling-policy"
 )
 
+// DefaultConfigMapMatcher returns a function that will match configmaps in
+// specified namespaces and/or with the openpolicyagent.org/policy label.
+func DefaultConfigMapMatcher(namespaces []string, requirePolicyLabel bool) func(*v1.ConfigMap) bool {
+	return func(cm *v1.ConfigMap) bool {
+		if requirePolicyLabel {
+			return matchesNamespace(cm, namespaces) && matchesLabel(cm)
+		}
+		return matchesNamespace(cm, namespaces) || matchesLabel(cm)
+	}
+}
+
+func matchesLabel(cm *v1.ConfigMap) bool {
+	return cm.Labels[policyLabelKey] == policyLabelValueRego
+}
+
+func matchesNamespace(cm *v1.ConfigMap, policies []string) bool {
+	for _, ns := range policies {
+		if ns == cm.Namespace {
+			return true
+		}
+	}
+	return false
+}
+
 // ConfigMapSync replicates policies stored in the API server as ConfigMaps into OPA.
 type ConfigMapSync struct {
 	kubeconfig *rest.Config
 	opa        opa.Policies
 	clientset  *kubernetes.Clientset
-	namespaces []string
+	matcher    func(*v1.ConfigMap) bool
 }
 
 // New returns a new ConfigMapSync that can be started.
-func New(kubeconfig *rest.Config, opa opa.Policies, namespaces []string) *ConfigMapSync {
+func New(kubeconfig *rest.Config, opa opa.Policies, matcher func(*v1.ConfigMap) bool) *ConfigMapSync {
 	cpy := *kubeconfig
 	cpy.GroupVersion = &schema.GroupVersion{
 		Version: "v1",
@@ -61,7 +85,7 @@ func New(kubeconfig *rest.Config, opa opa.Policies, namespaces []string) *Config
 	return &ConfigMapSync{
 		kubeconfig: &cpy,
 		opa:        opa,
-		namespaces: namespaces,
+		matcher:    matcher,
 	}
 }
 
@@ -93,7 +117,7 @@ func (s *ConfigMapSync) Run() (chan struct{}, error) {
 		})
 	for _, obj := range store.List() {
 		cm := obj.(*v1.ConfigMap)
-		if s.match(cm) {
+		if s.matcher(cm) {
 			s.syncAdd(cm)
 		}
 	}
@@ -103,40 +127,23 @@ func (s *ConfigMapSync) Run() (chan struct{}, error) {
 
 func (s *ConfigMapSync) add(obj interface{}) {
 	cm := obj.(*v1.ConfigMap)
-	if s.match(cm) {
+	if s.matcher(cm) {
 		s.syncAdd(cm)
 	}
 }
 
 func (s *ConfigMapSync) update(_, obj interface{}) {
 	cm := obj.(*v1.ConfigMap)
-	if s.match(cm) {
+	if s.matcher(cm) {
 		s.syncAdd(cm)
 	}
 }
 
 func (s *ConfigMapSync) delete(obj interface{}) {
 	cm := obj.(*v1.ConfigMap)
-	if s.match(cm) {
+	if s.matcher(cm) {
 		s.syncRemove(cm)
 	}
-}
-
-func (s *ConfigMapSync) match(cm *v1.ConfigMap) bool {
-	return s.matchLabel(cm) || s.matchNamespace(cm)
-}
-
-func (s *ConfigMapSync) matchLabel(cm *v1.ConfigMap) bool {
-	return cm.Labels[policyLabelKey] == policyLabelValueRego
-}
-
-func (s *ConfigMapSync) matchNamespace(cm *v1.ConfigMap) bool {
-	for _, ns := range s.namespaces {
-		if cm.Namespace == ns {
-			return true
-		}
-	}
-	return false
 }
 
 func (s *ConfigMapSync) syncAdd(cm *v1.ConfigMap) {

@@ -33,6 +33,7 @@ type params struct {
 	podName                             string
 	podNamespace                        string
 	policies                            []string
+	requirePolicyLabel                  bool
 	replicateCluster                    gvkFlag
 	replicateNamespace                  gvkFlag
 	replicatePath                       string
@@ -93,6 +94,7 @@ func main() {
 
 	// Replication options.
 	rootCmd.Flags().StringSliceVarP(&params.policies, "policies", "", []string{"opa", "kube-federation-scheduling-policy"}, "automatically load policies from these namespaces")
+	rootCmd.Flags().BoolVarP(&params.requirePolicyLabel, "require-policy-label", "", false, "only load policies out of labelled configmaps")
 	rootCmd.Flags().VarP(&params.replicateNamespace, "replicate", "", "replicate namespace-level resources")
 	rootCmd.Flags().VarP(&params.replicateCluster, "replicate-cluster", "", "replicate cluster-level resources")
 	rootCmd.Flags().StringVarP(&params.replicatePath, "replicate-path", "", "kubernetes", "set path to replicate data into")
@@ -125,7 +127,7 @@ func run(params *params) {
 		logrus.Fatalf("Failed to load kubeconfig: %v", err)
 	}
 
-	sync := policies.New(kubeconfig, opa.New(params.opaURL), params.policies)
+	sync := policies.New(kubeconfig, opa.New(params.opaURL), policies.DefaultConfigMapMatcher(params.policies, params.requirePolicyLabel))
 	_, err = sync.Run()
 	if err != nil {
 		logrus.Fatalf("Failed to start policy sync: %v", err)
