@@ -65,7 +65,7 @@ func TestHTTPClientMakePatch(t *testing.T) {
 
 	for _, tc := range tests {
 
-		client := &httpClient{"URL", tc.prefix}
+		client := &httpClient{"URL", tc.prefix, ""}
 		var value *interface{}
 
 		if tc.value != "" {
