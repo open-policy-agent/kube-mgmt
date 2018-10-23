@@ -59,13 +59,14 @@ type Data interface {
 }
 
 // New returns a new Client object.
-func New(url string) Client {
-	return &httpClient{strings.TrimRight(url, "/"), ""}
+func New(url string, auth string) Client {
+	return &httpClient{strings.TrimRight(url, "/"), "", auth}
 }
 
 type httpClient struct {
 	url    string
 	prefix string
+	authentication string
 }
 
 func (c *httpClient) Prefix(path string) Data {
@@ -185,6 +186,11 @@ func (c *httpClient) do(verb, path string, body io.Reader) (*http.Response, erro
 	if err != nil {
 		return nil, err
 	}
+
+	if c.authentication != "" {
+		req.Header.Set("Authorization", "Bearer " + c.authentication)
+	}
+
 	return http.DefaultClient.Do(req)
 }
 

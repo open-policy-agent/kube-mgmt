@@ -30,6 +30,7 @@ type params struct {
 	version                             bool
 	kubeconfigFile                      string
 	opaURL                              string
+	opaAuth                             string
 	podName                             string
 	podNamespace                        string
 	policies                            []string
@@ -89,6 +90,7 @@ func main() {
 	rootCmd.Flags().BoolVarP(&params.version, "version", "v", false, "print version and exit")
 	rootCmd.Flags().StringVarP(&params.kubeconfigFile, "kubeconfig", "", "", "set path to kubeconfig manually")
 	rootCmd.Flags().StringVarP(&params.opaURL, "opa-url", "", "http://localhost:8181/v1", "set URL of OPA API endpoint")
+	rootCmd.Flags().StringVarP(&params.opaAuth, "opa-auth-token", "", "", "set authentication token for OPA API endpoint")
 	rootCmd.Flags().StringVarP(&params.podName, "pod-name", "", "", "set pod name (required for admission registration ownership)")
 	rootCmd.Flags().StringVarP(&params.podNamespace, "pod-namespace", "", "", "set pod namespace (required for admission registration ownership)")
 
@@ -127,14 +129,14 @@ func run(params *params) {
 		logrus.Fatalf("Failed to load kubeconfig: %v", err)
 	}
 
-	sync := policies.New(kubeconfig, opa.New(params.opaURL), policies.DefaultConfigMapMatcher(params.policies, params.requirePolicyLabel))
+	sync := policies.New(kubeconfig, opa.New(params.opaURL, params.opaAuth), policies.DefaultConfigMapMatcher(params.policies, params.requirePolicyLabel))
 	_, err = sync.Run()
 	if err != nil {
 		logrus.Fatalf("Failed to start policy sync: %v", err)
 	}
 
 	for _, gvk := range params.replicateCluster {
-		sync := data.New(kubeconfig, opa.New(params.opaURL).Prefix(params.replicatePath), getResourceType(gvk, false))
+		sync := data.New(kubeconfig, opa.New(params.opaURL, params.opaAuth).Prefix(params.replicatePath), getResourceType(gvk, false))
 		_, err := sync.Run()
 		if err != nil {
 			logrus.Fatalf("Failed to start data sync for %v: %v", gvk, err)
@@ -142,7 +144,7 @@ func run(params *params) {
 	}
 
 	for _, gvk := range params.replicateNamespace {
-		sync := data.New(kubeconfig, opa.New(params.opaURL).Prefix(params.replicatePath), getResourceType(gvk, true))
+		sync := data.New(kubeconfig, opa.New(params.opaURL, params.opaAuth).Prefix(params.replicatePath), getResourceType(gvk, true))
 		_, err := sync.Run()
 		if err != nil {
 			logrus.Fatalf("Failed to start data sync for %v: %v", gvk, err)
@@ -161,7 +163,7 @@ func run(params *params) {
 
 	for _, gvk := range params.initializeCluster {
 		name := getInitializerName(gvk, params.initializerSuffix)
-		init := initialization.New(kubeconfig, opa.New(params.opaURL).Prefix(params.initializePath), getResourceType(gvk, false), name, owner)
+		init := initialization.New(kubeconfig, opa.New(params.opaURL, params.opaAuth).Prefix(params.initializePath), getResourceType(gvk, false), name, owner)
 		_, err := init.Run()
 		if err != nil {
 			logrus.Fatalf("Failed to start initializer for %v: %v", gvk, err)
@@ -170,7 +172,7 @@ func run(params *params) {
 
 	for _, gvk := range params.initializeNamespace {
 		name := getInitializerName(gvk, params.initializerSuffix)
-		init := initialization.New(kubeconfig, opa.New(params.opaURL).Prefix(params.initializePath), getResourceType(gvk, true), name, owner)
+		init := initialization.New(kubeconfig, opa.New(params.opaURL, params.opaAuth).Prefix(params.initializePath), getResourceType(gvk, true), name, owner)
 		_, err := init.Run()
 		if err != nil {
 			logrus.Fatalf("Failed to start initializer for %v: %v", gvk, err)
@@ -178,7 +180,7 @@ func run(params *params) {
 	}
 
 	if params.registerAdmissionController {
-		if err := admission.InstallDefaultAdmissionPolicy("default-system-main", opa.New(params.opaURL)); err != nil {
+		if err := admission.InstallDefaultAdmissionPolicy("default-system-main", opa.New(params.opaURL, params.opaAuth)); err != nil {
 			logrus.Fatalf("Failed to install default policy: %v", err)
 		}
 		err := admission.Register(kubeconfig, owner, params.admissionControllerName, params.admissionControllerCACertFile, params.admissionControllerServiceName, params.admissionControllerServiceNamespace, nil)
