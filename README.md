@@ -100,6 +100,8 @@ The example below would replicate Deployments, Services, and Nodes into OPA:
 
 To get started with admission control policy enforcement in Kubernetes 1.9 or later see the [Kubernetes Admission Control](http://www.openpolicyagent.org/docs/kubernetes-admission-control.html) tutorial. For older versions of Kubernetes, see [Admission Control (1.7)](./docs/admission-control-1.7.md).
 
+In the [Kubernetes Admission Control](http://www.openpolicyagent.org/docs/kubernetes-admission-control.html) tutorial, OPA is **NOT** running with an authorization policy configured and hence clients can read and write policies in OPA. When deploying OPA in an insecure environment, it is recommended to configure `authentication` and `authorization` on the OPA daemon. For an example of how OPA can be securely deployed as an admission controller see [Admission Control Secure](./docs/admission-control-secure.md).
+
 ## Development Guide
 
 To run all of the tests and build the Docker image run `make` in this directory.
