@@ -33,6 +33,7 @@ type params struct {
 	opaAuth                             string
 	podName                             string
 	podNamespace                        string
+	enablePolicies                      bool
 	policies                            []string
 	requirePolicyLabel                  bool
 	replicateCluster                    gvkFlag
@@ -95,6 +96,7 @@ func main() {
 	rootCmd.Flags().StringVarP(&params.podNamespace, "pod-namespace", "", "", "set pod namespace (required for admission registration ownership)")
 
 	// Replication options.
+	rootCmd.Flags().BoolVarP(&params.enablePolicies, "enable-policies", "", true, "whether to automatically discover policies from ConfigMaps")
 	rootCmd.Flags().StringSliceVarP(&params.policies, "policies", "", []string{"opa", "kube-federation-scheduling-policy"}, "automatically load policies from these namespaces")
 	rootCmd.Flags().BoolVarP(&params.requirePolicyLabel, "require-policy-label", "", false, "only load policies out of labelled configmaps")
 	rootCmd.Flags().VarP(&params.replicateNamespace, "replicate", "", "replicate namespace-level resources")
@@ -129,10 +131,12 @@ func run(params *params) {
 		logrus.Fatalf("Failed to load kubeconfig: %v", err)
 	}
 
-	sync := policies.New(kubeconfig, opa.New(params.opaURL, params.opaAuth), policies.DefaultConfigMapMatcher(params.policies, params.requirePolicyLabel))
-	_, err = sync.Run()
-	if err != nil {
-		logrus.Fatalf("Failed to start policy sync: %v", err)
+	if params.enablePolicies {
+		sync := policies.New(kubeconfig, opa.New(params.opaURL, params.opaAuth), policies.DefaultConfigMapMatcher(params.policies, params.requirePolicyLabel))
+		_, err = sync.Run()
+		if err != nil {
+			logrus.Fatalf("Failed to start policy sync: %v", err)
+		}
 	}
 
 	for _, gvk := range params.replicateCluster {
