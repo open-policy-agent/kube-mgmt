@@ -7,7 +7,7 @@ Policy-based control for Kubernetes deployments.
 `kube-mgmt` manages instances of the [Open Policy Agent](https://github.com/open-policy-agent/opa) on top of Kubernetes. Use `kube-mgmt` to:
 
 - Load policies into OPA via Kubernetes (see [Policies](#policies) below.)
-- Replicate Kubernetes resources into OPA (see [Caching](#caching) below.)
+- Replicate Kubernetes resources including [CustomResourceDefinitions (CRDs)](https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/#customresourcedefinitions) into OPA (see [Caching](#caching) below.)
 
 **NOTE**: `kube-mgmt` is currently in alpha. Join the discussion on [slack.openpolicyagent.org](http://slack.openpolicyagent.org).
 
@@ -95,6 +95,10 @@ The example below would replicate Deployments, Services, and Nodes into OPA:
 --replicate=v1/services
 --replicate-cluster=v1/nodes
 ```
+
+#### Custom Resource Definitions (CRDs)
+
+`kube-mgmt` can also be configured to replicate [Kubernetes Custom Resources](https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/) using the `--replicate` and `--replicate-cluster` options. For an example of how OPA can be used to enforce admission control polices on Kubernetes custom resources see [Admission Control For Custom Resources](./docs/admission-control-crd.md)
 
 ## Admission Control
 
