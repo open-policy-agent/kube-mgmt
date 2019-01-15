@@ -86,7 +86,42 @@ Replication is enabled with the following options:
 --replicate-cluster=<[group/]version/resource>
 ```
 
-#### Example Options
+Kubernetes resources replicated into OPA are layed out as follos:
+
+```
+<replicate-path>/<resource>/<namespace>/<name> # namespace scoped
+<replicate-path>/<resource>/<name>             # cluster scoped
+```
+
+- `<replicate-path>` is configurable (via `--replicate-path`) and
+  defaults to `kubernetes`.
+- `<resource>` is the Kubernetes resource plural, e.g., `nodes`,
+  `pods`, `services`, etc.
+- `<namespace>` is the namespace of the Kubernetes resource.
+- `<name>` is the name of the Kubernetes resource.
+
+For example, to search for services with the label `"foo"` you could write:
+
+```
+service := data.kubernetes.services[namespace][name].metadata.labels["foo"]
+```
+
+An alternative way to visualize the layout is as single JSON document:
+
+```
+{
+	"kubernetes": {
+		"services": {
+			"default": {
+				"example-service": {...},
+				"another-service": {...},
+				...
+			},
+			...
+		},
+		...
+}
+```
 
 The example below would replicate Deployments, Services, and Nodes into OPA:
 
