@@ -91,7 +91,6 @@ subjects:
 
 ```yaml
 name: kube-mgmt
-image: openpolicyagent/kube-mgmt:0.6
 args:
     - "--replicate=opa.example.com/v1/cats"        # replicate custom resources
 ```
