@@ -7,6 +7,7 @@ package main
 import (
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 	"path"
 	"strings"
@@ -31,6 +32,7 @@ type params struct {
 	kubeconfigFile                      string
 	opaURL                              string
 	opaAuth                             string
+	opaAuthFile                         string
 	podName                             string
 	podNamespace                        string
 	enablePolicies                      bool
@@ -92,6 +94,7 @@ func main() {
 	rootCmd.Flags().StringVarP(&params.kubeconfigFile, "kubeconfig", "", "", "set path to kubeconfig manually")
 	rootCmd.Flags().StringVarP(&params.opaURL, "opa-url", "", "http://localhost:8181/v1", "set URL of OPA API endpoint")
 	rootCmd.Flags().StringVarP(&params.opaAuth, "opa-auth-token", "", "", "set authentication token for OPA API endpoint")
+	rootCmd.Flags().StringVarP(&params.opaAuthFile, "opa-auth-token-file", "", "", "set file containing authentication token for OPA API endpoint")
 	rootCmd.Flags().StringVarP(&params.podName, "pod-name", "", "", "set pod name (required for admission registration ownership)")
 	rootCmd.Flags().StringVarP(&params.podNamespace, "pod-namespace", "", "", "set pod namespace (required for admission registration ownership)")
 
@@ -129,6 +132,14 @@ func run(params *params) {
 	kubeconfig, err := loadRESTConfig(params.kubeconfigFile)
 	if err != nil {
 		logrus.Fatalf("Failed to load kubeconfig: %v", err)
+	}
+
+	if params.opaAuthFile != "" {
+		file, err := ioutil.ReadFile(params.opaAuthFile)
+		if err != nil {
+			logrus.Fatalf("Failed to read opa auth token file %s", params.opaAuthFile)
+		}
+		params.opaAuth = strings.Split(string(file), "\n")[0]
 	}
 
 	if params.enablePolicies {
