@@ -8,7 +8,7 @@ This tutorial will show how to securely deploy OPA as an admission controller. T
 
 1. Start `OPA` with authentication and authorization enabled using the `--authentication` and `--authorization` options respectively.
 2. Volume mount OPA's startup authorization policy into the OPA container.
-3. Start `kube-mgmt` with `Bearer` token flag using the `--opa-auth-token` option.
+3. Start `kube-mgmt` with `Bearer` token flag using the `--opa-auth-token-file` option.
 4. Configure `kube-mgmt` to load polices stored in ConfigMaps that are created in the `opa` namespace and are labelled `openpolicyagent.org/policy=rego`. This is enforced using the `--require-policy-label=true` option.
 5. Configure the Kubernetes API server to use `Bearer` token.
 
@@ -109,39 +109,39 @@ spec:
       args:
         - "--replicate-cluster=v1/namespaces"
         - "--replicate=extensions/v1beta1/ingresses"
-        - "--opa-auth-token=kube-mgmt"
+        - "--opa-auth-token-file=/policy/token"
         - "--require-policy-label=true"
+      volumeMounts:
+        - readOnly: true
+          mountPath: /policies
+          name: inject-policy
   volumes:
     - name: opa-server
       secret:
         secretName: opa-server
     - name: inject-policy
-      configMap:
-        name: inject-policy
+      secret:
+        secretName: inject-policy
 ```
 
-2. Include the ConfigMap that contains OPA's startup authorization policy.
+2. Include the Secret that contains OPA's startup authorization policy.
 
-```yaml
----
-kind: ConfigMap
-apiVersion: v1
-metadata:
-  name: inject-policy
-  namespace: opa
-data:
-  authz.rego: |
-      package system.authz
+```bash
+cat > authz.rego <<EOF
+package system.authz
 
-      default allow = false
+default allow = false
 
-      allow {
-        "kube-mgmt" = input.identity
-      }
+allow {
+  "kube-mgmt" = input.identity
+}
 
-      allow {
-        <apiserver_secret_token> = input.identity
-      }
+allow {
+  <apiserver_secret_token> = input.identity
+}
+EOF
+
+kubectl create secret generic inject-policy -n opa --from-file=authz.rego --from-literal=token=kube-mgmt
 
 ```
 
@@ -189,6 +189,6 @@ the ConfigMap is:
 - Created in a namespace listed in the --policies option. Default namespace is `opa`.
 - Labelled with `openpolicyagent.org/policy=rego`.
 
-`kube-mgmt` is started with the `--opa-auth-token` flag and hence all requests made to OPA will include a `Bearer` token (`kube-mgmt` in this case).
+`kube-mgmt` is started with the `--opa-auth-token-file` flag and hence all requests made to OPA will include a `Bearer` token (`kube-mgmt` in this case).
 
 You can now follow the [Kubernetes Admission Control](http://www.openpolicyagent.org/docs/kubernetes-admission-control.html) tutorial to deploy OPA on top of Kubernetes and test admission control. **Make sure to label the ConfigMap when you store a policy inside it.**

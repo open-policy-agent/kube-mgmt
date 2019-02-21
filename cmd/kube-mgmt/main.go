@@ -134,6 +134,10 @@ func run(params *params) {
 		logrus.Fatalf("Failed to load kubeconfig: %v", err)
 	}
 
+	if params.opaAuthFile != "" && params.opaAuth != "" {
+		logrus.Fatalf("You can not use both --opa-auth-token and --opa-auth-token-file")
+	}
+
 	if params.opaAuthFile != "" {
 		file, err := ioutil.ReadFile(params.opaAuthFile)
 		if err != nil {
