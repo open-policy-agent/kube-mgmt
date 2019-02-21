@@ -109,7 +109,7 @@ spec:
       args:
         - "--replicate-cluster=v1/namespaces"
         - "--replicate=extensions/v1beta1/ingresses"
-        - "--opa-auth-token-file=/policy/token"
+        - "--opa-auth-token-file=/policies/token"
         - "--require-policy-label=true"
       volumeMounts:
         - readOnly: true
