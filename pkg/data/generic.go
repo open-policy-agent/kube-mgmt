@@ -99,6 +99,11 @@ func (s *GenericSync) syncAdd(obj interface{}) {
 }
 
 func (s *GenericSync) syncRemove(obj interface{}) {
+	// OnDelete can return an object of type DeletedFinalStateUnknown if the watch event was missed
+	staleObj, stale := obj.(cache.DeletedFinalStateUnknown)
+	if stale {
+		obj = staleObj.Obj
+	}
 	u := obj.(*unstructured.Unstructured)
 	name := u.GetName()
 	var path = u.GetName()
