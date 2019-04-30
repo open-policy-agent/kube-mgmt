@@ -49,7 +49,7 @@ func matchesLabel(cm *v1.ConfigMap) bool {
 
 func matchesNamespace(cm *v1.ConfigMap, policies []string) bool {
 	for _, ns := range policies {
-		if ns == cm.Namespace {
+		if ns == cm.Namespace || ns == "*" {
 			return true
 		}
 	}
