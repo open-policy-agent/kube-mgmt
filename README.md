@@ -60,7 +60,7 @@ Policy-based control for Kubernetes deployments.
 and loads them into OPA. `kube-mgmt` assumes a ConfigMap contains policies if
 the ConfigMap is:
 
-- Created in a namespace listed in the --policies option.
+- Created in a namespace listed in the `--policies` option. If you specify `--policies=*` then `kube-mgmt` will look for policies in ALL namespaces.
 - Labelled with `openpolicyagent.org/policy=rego`.
 
 When a policy has been successfully loaded into OPA, the
