@@ -64,8 +64,8 @@ func New(url string, auth string) Client {
 }
 
 type httpClient struct {
-	url    string
-	prefix string
+	url            string
+	prefix         string
 	authentication string
 }
 
@@ -188,7 +188,7 @@ func (c *httpClient) do(verb, path string, body io.Reader) (*http.Response, erro
 	}
 
 	if c.authentication != "" {
-		req.Header.Set("Authorization", "Bearer " + c.authentication)
+		req.Header.Set("Authorization", "Bearer "+c.authentication)
 	}
 
 	return http.DefaultClient.Do(req)

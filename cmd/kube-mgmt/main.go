@@ -14,10 +14,10 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	"github.com/open-policy-agent/kube-mgmt/pkg/admission"
+	"github.com/open-policy-agent/kube-mgmt/pkg/configmap"
 	"github.com/open-policy-agent/kube-mgmt/pkg/data"
 	"github.com/open-policy-agent/kube-mgmt/pkg/initialization"
 	"github.com/open-policy-agent/kube-mgmt/pkg/opa"
-	"github.com/open-policy-agent/kube-mgmt/pkg/policies"
 	"github.com/open-policy-agent/kube-mgmt/pkg/types"
 	"github.com/open-policy-agent/kube-mgmt/pkg/version"
 	"github.com/spf13/cobra"
@@ -36,6 +36,7 @@ type params struct {
 	podName                             string
 	podNamespace                        string
 	enablePolicies                      bool
+	enableData                          bool
 	policies                            []string
 	requirePolicyLabel                  bool
 	replicateCluster                    gvkFlag
@@ -100,6 +101,7 @@ func main() {
 
 	// Replication options.
 	rootCmd.Flags().BoolVarP(&params.enablePolicies, "enable-policies", "", true, "whether to automatically discover policies from ConfigMaps")
+	rootCmd.Flags().BoolVarP(&params.enableData, "enable-data", "", false, "whether to automatically discover data from correctly labelled ConfigMaps")
 	rootCmd.Flags().StringSliceVarP(&params.policies, "policies", "", []string{"opa", "kube-federation-scheduling-policy"}, "automatically load policies from these namespaces")
 	rootCmd.Flags().BoolVarP(&params.requirePolicyLabel, "require-policy-label", "", false, "only load policies out of labelled configmaps")
 	rootCmd.Flags().VarP(&params.replicateNamespace, "replicate", "", "replicate namespace-level resources")
@@ -146,11 +148,15 @@ func run(params *params) {
 		params.opaAuth = strings.Split(string(file), "\n")[0]
 	}
 
-	if params.enablePolicies {
-		sync := policies.New(kubeconfig, opa.New(params.opaURL, params.opaAuth), policies.DefaultConfigMapMatcher(params.policies, params.requirePolicyLabel))
+	if params.enablePolicies || params.enableData {
+		sync := configmap.New(
+			kubeconfig,
+			opa.New(params.opaURL, params.opaAuth),
+			configmap.DefaultConfigMapMatcher(params.policies, params.requirePolicyLabel),
+		)
 		_, err = sync.Run()
 		if err != nil {
-			logrus.Fatalf("Failed to start policy sync: %v", err)
+			logrus.Fatalf("Failed to start configmap sync: %v", err)
 		}
 	}
 
