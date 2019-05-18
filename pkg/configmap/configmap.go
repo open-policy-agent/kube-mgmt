@@ -177,7 +177,7 @@ func (s *Sync) syncAdd(cm *v1.ConfigMap, isPolicy bool) {
 			// directly to the OPA data store.
 			var data map[string]interface{}
 			if err = json.Unmarshal([]byte(value), &data); err != nil {
-				logrus.Errorf("Faild to parse JSON data in configmap with id: %s", id)
+				logrus.Errorf("Failed to parse JSON data in configmap with id: %s", id)
 			} else {
 				err = s.opa.PutData(id, data)
 			}
