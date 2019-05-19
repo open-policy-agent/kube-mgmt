@@ -152,7 +152,12 @@ func run(params *params) {
 		sync := configmap.New(
 			kubeconfig,
 			opa.New(params.opaURL, params.opaAuth),
-			configmap.DefaultConfigMapMatcher(params.policies, params.requirePolicyLabel),
+			configmap.DefaultConfigMapMatcher(
+				params.policies,
+				params.requirePolicyLabel,
+				params.enablePolicies,
+				params.enableData,
+			),
 		)
 		_, err = sync.Run()
 		if err != nil {
