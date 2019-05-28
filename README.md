@@ -9,8 +9,6 @@ Policy-based control for Kubernetes deployments.
 - Load policies into OPA via Kubernetes (see [Policies](#policies) below.)
 - Replicate Kubernetes resources including [CustomResourceDefinitions (CRDs)](https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/#customresourcedefinitions) into OPA (see [Caching](#caching) below.)
 
-**NOTE**: `kube-mgmt` is currently in alpha. Join the discussion on [slack.openpolicyagent.org](http://slack.openpolicyagent.org).
-
 ## Deployment Guide
 
 ### Hello World
