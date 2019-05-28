@@ -70,6 +70,43 @@ If loading fails for some reason (e.g., because of a parse error), the
 `openpolicyagent.org/policy-status` annotation is set to `{"status": "error",
 "error": ...}` where the `error` field contains details about the failure.
 
+### JSON Loading
+
+`kube-mgmt` can be configured to load arbitrary JSON out of ConfigMaps into
+OPA's data namespace. This is useful for providing contextual information to
+your policies.
+
+Enable data loading by specifying the `--enable-data` command-line flag to
+`kube-mgmt`. If data loading is enabled `kube-mgmt` will load JSON out of
+ConfigMaps labelled with `openpolicyagent.org/data=opa`.
+
+Data loaded out of ConfigMaps is layed out as follows:
+
+```
+<namespace>/<name>/<key>
+```
+
+For example, if the following ConfigMap was created:
+
+```yaml
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: hello-data
+  namespace: opa
+  labels:
+    openpolicyagent.org/data: opa
+data:
+  x.json: |
+    {"a": [1,2,3,4]}
+```
+
+You could refer to the data inside your policies as follows:
+
+```ruby
+data.opa["hello-data"]["x.json"].a[0]  # evaluates to 1
+```
+
 ## Caching
 
 `kube-mgmt` can be configured to replicate Kubernetes resources into OPA so that
@@ -131,7 +168,7 @@ The example below would replicate Deployments, Services, and Nodes into OPA:
 --replicate-cluster=v1/nodes
 ```
 
-#### Custom Resource Definitions (CRDs)
+### Custom Resource Definitions (CRDs)
 
 `kube-mgmt` can also be configured to replicate [Kubernetes Custom Resources](https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/) using the `--replicate` and `--replicate-cluster` options. For an example of how OPA can be used to enforce admission control polices on Kubernetes custom resources see [Admission Control For Custom Resources](./docs/admission-control-crd.md)
 
