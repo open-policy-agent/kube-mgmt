@@ -118,7 +118,7 @@ func New(kubeconfig *rest.Config, opa opa.Client, matcher func(*v1.ConfigMap) (b
 
 // Run starts the synchronizer. To stop the synchronizer send a message to the
 // channel.
-func (s *Sync) Run() (chan struct{}, error) {
+func (s *Sync) Run(namespaces []string) (chan struct{}, error) {
 	client, err := rest.RESTClientFor(s.kubeconfig)
 	if err != nil {
 		return nil, err
@@ -128,27 +128,30 @@ func (s *Sync) Run() (chan struct{}, error) {
 		return nil, err
 	}
 	quit := make(chan struct{})
-	source := cache.NewListWatchFromClient(
-		client,
-		"configmaps",
-		v1.NamespaceAll,
-		fields.Everything())
-	store, controller := cache.NewInformer(
-		source,
-		&v1.ConfigMap{},
-		time.Second*60,
-		cache.ResourceEventHandlerFuncs{
-			AddFunc:    s.add,
-			UpdateFunc: s.update,
-			DeleteFunc: s.delete,
-		})
-	for _, obj := range store.List() {
-		cm := obj.(*v1.ConfigMap)
-		if match, isPolicy := s.matcher(cm); match {
-			s.syncAdd(cm, isPolicy)
+
+	for _, namespace := range namespaces {
+		source := cache.NewListWatchFromClient(
+			client,
+			"configmaps",
+			namespace,
+			fields.Everything())
+		store, controller := cache.NewInformer(
+			source,
+			&v1.ConfigMap{},
+			time.Second*60,
+			cache.ResourceEventHandlerFuncs{
+				AddFunc:    s.add,
+				UpdateFunc: s.update,
+				DeleteFunc: s.delete,
+			})
+		for _, obj := range store.List() {
+			cm := obj.(*v1.ConfigMap)
+			if match, isPolicy := s.matcher(cm); match {
+				s.syncAdd(cm, isPolicy)
+			}
 		}
+		go controller.Run(quit)
 	}
-	go controller.Run(quit)
 	return quit, nil
 }
 
