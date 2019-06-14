@@ -159,7 +159,7 @@ func run(params *params) {
 				params.enableData,
 			),
 		)
-		_, err = sync.Run()
+		_, err = sync.Run(params.policies)
 		if err != nil {
 			logrus.Fatalf("Failed to start configmap sync: %v", err)
 		}
