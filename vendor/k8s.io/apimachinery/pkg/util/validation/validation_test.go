@@ -19,6 +19,8 @@ package validation
 import (
 	"strings"
 	"testing"
+
+	"k8s.io/apimachinery/pkg/util/validation/field"
 )
 
 func TestIsDNS1123Label(t *testing.T) {
@@ -154,6 +156,30 @@ func TestIsValidPortNum(t *testing.T) {
 	}
 }
 
+func TestIsInRange(t *testing.T) {
+	goodValues := []struct {
+		value int
+		min   int
+		max   int
+	}{{1, 0, 10}, {5, 5, 20}, {25, 10, 25}}
+	for _, val := range goodValues {
+		if msgs := IsInRange(val.value, val.min, val.max); len(msgs) > 0 {
+			t.Errorf("expected no errors for %#v, but got %v", val, msgs)
+		}
+	}
+
+	badValues := []struct {
+		value int
+		min   int
+		max   int
+	}{{1, 2, 10}, {5, -4, 2}, {25, 100, 120}}
+	for _, val := range badValues {
+		if msgs := IsInRange(val.value, val.min, val.max); len(msgs) == 0 {
+			t.Errorf("expected errors for %#v", val)
+		}
+	}
+}
+
 func createGroupIDs(ids ...int64) []int64 {
 	var output []int64
 	for _, id := range ids {
@@ -271,7 +297,7 @@ func TestIsValidLabelValue(t *testing.T) {
 		"end-with-num-1",
 		"1234",                  // only num
 		strings.Repeat("a", 63), // to the limit
-		"", // empty value
+		"",                      // empty value
 	}
 	for i := range successCases {
 		if errs := IsValidLabelValue(successCases[i]); len(errs) != 0 {
@@ -446,6 +472,69 @@ func TestIsWildcardDNS1123Subdomain(t *testing.T) {
 	}
 	for _, val := range badValues {
 		if errs := IsWildcardDNS1123Subdomain(val); len(errs) == 0 {
+			t.Errorf("expected errors for %q", val)
+		}
+	}
+}
+
+func TestIsFullyQualifiedName(t *testing.T) {
+	tests := []struct {
+		name       string
+		targetName string
+		err        string
+	}{
+		{
+			name:       "name needs to be fully qualified, i.e., contains at least 2 dots",
+			targetName: "k8s.io",
+			err:        "should be a domain with at least three segments separated by dots",
+		},
+		{
+			name:       "name cannot be empty",
+			targetName: "",
+			err:        "Required value",
+		},
+		{
+			name:       "name must conform to RFC 1123",
+			targetName: "A.B.C",
+			err:        "a DNS-1123 subdomain must consist of lower case alphanumeric characters",
+		},
+	}
+	for _, tc := range tests {
+		err := IsFullyQualifiedName(field.NewPath(""), tc.targetName).ToAggregate()
+		switch {
+		case tc.err == "" && err != nil:
+			t.Errorf("%q: unexpected error: %v", tc.name, err)
+		case tc.err != "" && err == nil:
+			t.Errorf("%q: unexpected no error, expected %s", tc.name, tc.err)
+		case tc.err != "" && err != nil && !strings.Contains(err.Error(), tc.err):
+			t.Errorf("%q: expected %s, got %v", tc.name, tc.err, err)
+		}
+	}
+}
+
+func TestIsValidSocketAddr(t *testing.T) {
+	goodValues := []string{
+		"0.0.0.0:10254",
+		"127.0.0.1:8888",
+		"[2001:db8:1f70::999:de8:7648:6e8]:10254",
+		"[::]:10254",
+	}
+	for _, val := range goodValues {
+		if errs := IsValidSocketAddr(val); len(errs) != 0 {
+			t.Errorf("expected no errors for %q: %v", val, errs)
+		}
+	}
+
+	badValues := []string{
+		"0.0.0.0.0:2020",
+		"0.0.0.0",
+		"6.6.6.6:909090",
+		"2001:db8:1f70::999:de8:7648:6e8:87567:102545",
+		"",
+		"*",
+	}
+	for _, val := range badValues {
+		if errs := IsValidSocketAddr(val); len(errs) == 0 {
 			t.Errorf("expected errors for %q", val)
 		}
 	}

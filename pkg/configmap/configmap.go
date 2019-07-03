@@ -11,14 +11,14 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	"github.com/open-policy-agent/kube-mgmt/pkg/opa"
+	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/pkg/api"
-	v1 "k8s.io/client-go/pkg/api/v1"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 )
@@ -99,16 +99,17 @@ func New(kubeconfig *rest.Config, opa opa.Client, matcher func(*v1.ConfigMap) (b
 	}
 	cpy.APIPath = "/api"
 	cpy.ContentType = runtime.ContentTypeJSON
-	cpy.NegotiatedSerializer = serializer.DirectCodecFactory{CodecFactory: api.Codecs}
+	scheme := runtime.NewScheme()
+	cpy.NegotiatedSerializer = serializer.DirectCodecFactory{CodecFactory: serializer.NewCodecFactory(scheme)}
 	builder := runtime.NewSchemeBuilder(func(scheme *runtime.Scheme) error {
 		scheme.AddKnownTypes(
 			*cpy.GroupVersion,
-			&api.ListOptions{},
+			&metav1.ListOptions{},
 			&v1.ConfigMapList{},
 			&v1.ConfigMap{})
 		return nil
 	})
-	builder.AddToScheme(api.Scheme)
+	builder.AddToScheme(scheme)
 	return &Sync{
 		kubeconfig: &cpy,
 		opa:        opa,
@@ -252,7 +253,7 @@ func (s *Sync) setStatusAnnotation(cm *v1.ConfigMap, st status, isPolicy bool) {
 	if err != nil {
 		logrus.Errorf("Failed to serialize patch for %v/%v: %v", cm.Namespace, cm.Name, err)
 	}
-	_, err = s.clientset.ConfigMaps(cm.Namespace).Patch(cm.Name, types.StrategicMergePatchType, bs)
+	_, err = s.clientset.CoreV1().ConfigMaps(cm.Namespace).Patch(cm.Name, types.StrategicMergePatchType, bs)
 	if err != nil {
 		logrus.Errorf("Failed to %v for %v/%v: %v", statusAnnotationKey, cm.Namespace, cm.Name, err)
 	}

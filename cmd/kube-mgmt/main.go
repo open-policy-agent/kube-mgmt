@@ -6,7 +6,6 @@ package main
 
 import (
 	"fmt"
-	"io"
 	"io/ioutil"
 	"os"
 	"path"
@@ -14,61 +13,31 @@ import (
 	"time"
 
 	"github.com/Sirupsen/logrus"
-	"github.com/open-policy-agent/kube-mgmt/pkg/admission"
 	"github.com/open-policy-agent/kube-mgmt/pkg/configmap"
 	"github.com/open-policy-agent/kube-mgmt/pkg/data"
-	"github.com/open-policy-agent/kube-mgmt/pkg/initialization"
 	"github.com/open-policy-agent/kube-mgmt/pkg/opa"
 	"github.com/open-policy-agent/kube-mgmt/pkg/types"
 	"github.com/open-policy-agent/kube-mgmt/pkg/version"
 	"github.com/spf13/cobra"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 )
 
 type params struct {
-	version                             bool
-	kubeconfigFile                      string
-	opaURL                              string
-	opaAuth                             string
-	opaAuthFile                         string
-	podName                             string
-	podNamespace                        string
-	enablePolicies                      bool
-	enableData                          bool
-	policies                            []string
-	requirePolicyLabel                  bool
-	replicateCluster                    gvkFlag
-	replicateNamespace                  gvkFlag
-	replicatePath                       string
-	replicateResync                     time.Duration
-	registerAdmissionController         bool
-	admissionControllerName             string
-	admissionControllerCACertFile       string
-	admissionControllerServiceName      string
-	admissionControllerServiceNamespace string
-	initializeCluster                   gvkFlag
-	initializeNamespace                 gvkFlag
-	initializePath                      string
-	initializerSuffix                   string
-}
-
-func (p params) Validate(w io.Writer) bool {
-
-	valid := true
-
-	if (p.InitializersEnabled() || p.registerAdmissionController) && (p.podNamespace == "" || p.podName == "") {
-		fmt.Fprintln(w, "--pod-name and --pod-namespace must specified if deployed as initializer or webhook")
-		valid = false
-	}
-
-	return valid
-}
-
-func (p params) InitializersEnabled() bool {
-	return len(p.initializeCluster) > 0 || len(p.initializeNamespace) > 0
+	version            bool
+	kubeconfigFile     string
+	opaURL             string
+	opaAuth            string
+	opaAuthFile        string
+	podName            string
+	podNamespace       string
+	enablePolicies     bool
+	enableData         bool
+	policies           []string
+	requirePolicyLabel bool
+	replicateCluster   gvkFlag
+	replicateNamespace gvkFlag
+	replicatePath      string
 }
 
 func main() {
@@ -80,9 +49,6 @@ func main() {
 		Use:   commandName,
 		Short: fmt.Sprintf("%v manages OPA on top of Kubernetes", commandName),
 		Run: func(cmd *cobra.Command, args []string) {
-			if !params.Validate(os.Stderr) {
-				os.Exit(1)
-			}
 			if params.version {
 				fmt.Println("Version:", version.Version)
 				fmt.Println("Git:", version.Git)
@@ -109,20 +75,9 @@ func main() {
 	rootCmd.Flags().VarP(&params.replicateNamespace, "replicate", "", "replicate namespace-level resources")
 	rootCmd.Flags().VarP(&params.replicateCluster, "replicate-cluster", "", "replicate cluster-level resources")
 	rootCmd.Flags().StringVarP(&params.replicatePath, "replicate-path", "", "kubernetes", "set path to replicate data into")
-	rootCmd.Flags().DurationVar(&params.replicateResync, "replicate-resync", 60*time.Second, "resend all PUT messages at this interval")
-
-	// Admission control options.
-	rootCmd.Flags().BoolVarP(&params.registerAdmissionController, "register-admission-controller", "", false, "register OPA as an admission controller")
-	rootCmd.Flags().StringVarP(&params.admissionControllerName, "admission-controller-name", "", "admission.openpolicyagent.org", "set name of OPA admission controller")
-	rootCmd.Flags().StringVarP(&params.admissionControllerCACertFile, "admission-controller-ca-cert-file", "", "", "set path of admission control CA certificate file")
-	rootCmd.Flags().StringVarP(&params.admissionControllerServiceName, "admission-controller-service-name", "", "opa", "set name of admission control service")
-	rootCmd.Flags().StringVarP(&params.admissionControllerServiceNamespace, "admission-controller-service-namespace", "", "default", "set namespace of admission control service")
-
-	// Initializer options.
-	rootCmd.Flags().VarP(&params.initializeNamespace, "initialize", "", "initialize namespace-level resources")
-	rootCmd.Flags().VarP(&params.initializeCluster, "initialize-cluster", "", "initialize cluster-level resources")
-	rootCmd.Flags().StringVarP(&params.initializePath, "initialize-path", "", "kubernetes/admission/initialize", "set path of initialization policy")
-	rootCmd.Flags().StringVarP(&params.initializerSuffix, "initializer-suffix", "", "initializer.openpolicyagent.org", "set suffix of OPA initialization controllers")
+	var replicateResync time.Duration
+	rootCmd.Flags().DurationVar(&replicateResync, "replicate-resync", 60*time.Second, "resend all PUT messages at this interval")
+	rootCmd.Flags().MarkDeprecated("replicate-resync", "not applicable")
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
@@ -169,7 +124,7 @@ func run(params *params) {
 	}
 
 	for _, gvk := range params.replicateCluster {
-		sync := data.New(kubeconfig, opa.New(params.opaURL, params.opaAuth).Prefix(params.replicatePath), getResourceType(gvk, false), params.replicateResync)
+		sync := data.New(kubeconfig, opa.New(params.opaURL, params.opaAuth).Prefix(params.replicatePath), getResourceType(gvk, false))
 		_, err := sync.Run()
 		if err != nil {
 			logrus.Fatalf("Failed to start data sync for %v: %v", gvk, err)
@@ -177,48 +132,10 @@ func run(params *params) {
 	}
 
 	for _, gvk := range params.replicateNamespace {
-		sync := data.New(kubeconfig, opa.New(params.opaURL, params.opaAuth).Prefix(params.replicatePath), getResourceType(gvk, true), params.replicateResync)
+		sync := data.New(kubeconfig, opa.New(params.opaURL, params.opaAuth).Prefix(params.replicatePath), getResourceType(gvk, true))
 		_, err := sync.Run()
 		if err != nil {
 			logrus.Fatalf("Failed to start data sync for %v: %v", gvk, err)
-		}
-	}
-
-	var owner metav1.OwnerReference
-
-	if params.InitializersEnabled() || params.registerAdmissionController {
-		var err error
-		owner, err = makeOwnerReference(kubeconfig, params.podName, params.podNamespace)
-		if err != nil {
-			logrus.Fatalf("Failed to make owner reference: %v", err)
-		}
-	}
-
-	for _, gvk := range params.initializeCluster {
-		name := getInitializerName(gvk, params.initializerSuffix)
-		init := initialization.New(kubeconfig, opa.New(params.opaURL, params.opaAuth).Prefix(params.initializePath), getResourceType(gvk, false), name, owner)
-		_, err := init.Run()
-		if err != nil {
-			logrus.Fatalf("Failed to start initializer for %v: %v", gvk, err)
-		}
-	}
-
-	for _, gvk := range params.initializeNamespace {
-		name := getInitializerName(gvk, params.initializerSuffix)
-		init := initialization.New(kubeconfig, opa.New(params.opaURL, params.opaAuth).Prefix(params.initializePath), getResourceType(gvk, true), name, owner)
-		_, err := init.Run()
-		if err != nil {
-			logrus.Fatalf("Failed to start initializer for %v: %v", gvk, err)
-		}
-	}
-
-	if params.registerAdmissionController {
-		if err := admission.InstallDefaultAdmissionPolicy("default-system-main", opa.New(params.opaURL, params.opaAuth)); err != nil {
-			logrus.Fatalf("Failed to install default policy: %v", err)
-		}
-		err := admission.Register(kubeconfig, owner, params.admissionControllerName, params.admissionControllerCACertFile, params.admissionControllerServiceName, params.admissionControllerServiceNamespace, nil)
-		if err != nil {
-			logrus.Fatalf("Failed to start admission registration: %v", err)
 		}
 	}
 
@@ -233,10 +150,6 @@ func loadRESTConfig(path string) (*rest.Config, error) {
 	return rest.InClusterConfig()
 }
 
-func getInitializerName(gvk groupVersionKind, suffix string) string {
-	return strings.Replace(gvk.String(), "/", ".", -1) + "." + suffix
-}
-
 func getResourceType(gvk groupVersionKind, namespaced bool) types.ResourceType {
 	return types.ResourceType{
 		Namespaced: namespaced,
@@ -244,25 +157,4 @@ func getResourceType(gvk groupVersionKind, namespaced bool) types.ResourceType {
 		Version:    gvk.Version,
 		Resource:   gvk.Kind,
 	}
-}
-
-func makeOwnerReference(kubeconfig *rest.Config, name, namespace string) (result metav1.OwnerReference, err error) {
-	clientset, err := kubernetes.NewForConfig(kubeconfig)
-	if err != nil {
-		return result, err
-	}
-
-	pod, err := clientset.Pods(namespace).Get(name, metav1.GetOptions{})
-	if err != nil {
-		return result, err
-	}
-
-	result.APIVersion = "v1"
-	result.Kind = "Pod"
-	yes := true
-	result.BlockOwnerDeletion = &yes
-	result.Name = pod.Name
-	result.UID = pod.UID
-
-	return result, nil
 }

@@ -147,6 +147,70 @@ func TestPluralAggregate(t *testing.T) {
 	}
 }
 
+func TestDedupeAggregate(t *testing.T) {
+	var slice []error = []error{fmt.Errorf("abc"), fmt.Errorf("abc")}
+	var agg Aggregate
+
+	agg = NewAggregate(slice)
+	if agg == nil {
+		t.Errorf("expected non-nil")
+	}
+	if s := agg.Error(); s != "abc" {
+		t.Errorf("expected 'abc', got %q", s)
+	}
+	if s := agg.Errors(); len(s) != 2 {
+		t.Errorf("expected two-elements slice, got %#v", s)
+	}
+}
+
+func TestDedupePluralAggregate(t *testing.T) {
+	var slice []error = []error{fmt.Errorf("abc"), fmt.Errorf("abc"), fmt.Errorf("123")}
+	var agg Aggregate
+
+	agg = NewAggregate(slice)
+	if agg == nil {
+		t.Errorf("expected non-nil")
+	}
+	if s := agg.Error(); s != "[abc, 123]" {
+		t.Errorf("expected '[abc, 123]', got %q", s)
+	}
+	if s := agg.Errors(); len(s) != 3 {
+		t.Errorf("expected three-elements slice, got %#v", s)
+	}
+}
+
+func TestFlattenAndDedupeAggregate(t *testing.T) {
+	var slice []error = []error{fmt.Errorf("abc"), fmt.Errorf("abc"), NewAggregate([]error{fmt.Errorf("abc")})}
+	var agg Aggregate
+
+	agg = NewAggregate(slice)
+	if agg == nil {
+		t.Errorf("expected non-nil")
+	}
+	if s := agg.Error(); s != "abc" {
+		t.Errorf("expected 'abc', got %q", s)
+	}
+	if s := agg.Errors(); len(s) != 3 {
+		t.Errorf("expected three-elements slice, got %#v", s)
+	}
+}
+
+func TestFlattenAggregate(t *testing.T) {
+	var slice []error = []error{fmt.Errorf("abc"), fmt.Errorf("abc"), NewAggregate([]error{fmt.Errorf("abc"), fmt.Errorf("def"), NewAggregate([]error{fmt.Errorf("def"), fmt.Errorf("ghi")})})}
+	var agg Aggregate
+
+	agg = NewAggregate(slice)
+	if agg == nil {
+		t.Errorf("expected non-nil")
+	}
+	if s := agg.Error(); s != "[abc, def, ghi]" {
+		t.Errorf("expected '[abc, def, ghi]', got %q", s)
+	}
+	if s := agg.Errors(); len(s) != 3 {
+		t.Errorf("expected three-elements slice, got %#v", s)
+	}
+}
+
 func TestFilterOut(t *testing.T) {
 	testCases := []struct {
 		err      error
@@ -266,7 +330,7 @@ func TestFlatten(t *testing.T) {
 func TestCreateAggregateFromMessageCountMap(t *testing.T) {
 	testCases := []struct {
 		name     string
-		mcp      MessageCountMap
+		mcm      MessageCountMap
 		expected Aggregate
 	}{
 		{
@@ -279,6 +343,11 @@ func TestCreateAggregateFromMessageCountMap(t *testing.T) {
 			MessageCountMap{"abc": 2, "ghi": 1},
 			aggregate{fmt.Errorf("abc (repeated 2 times)"), fmt.Errorf("ghi")},
 		},
+		{
+			"input has multiple messages",
+			MessageCountMap{"ghi": 1, "abc": 2},
+			aggregate{fmt.Errorf("abc (repeated 2 times)"), fmt.Errorf("ghi")},
+		},
 	}
 
 	var expected, agg []error
@@ -288,8 +357,8 @@ func TestCreateAggregateFromMessageCountMap(t *testing.T) {
 				expected = testCase.expected.Errors()
 				sort.Slice(expected, func(i, j int) bool { return expected[i].Error() < expected[j].Error() })
 			}
-			if testCase.mcp != nil {
-				agg = CreateAggregateFromMessageCountMap(testCase.mcp).Errors()
+			if testCase.mcm != nil {
+				agg = CreateAggregateFromMessageCountMap(testCase.mcm).Errors()
 				sort.Slice(agg, func(i, j int) bool { return agg[i].Error() < agg[j].Error() })
 			}
 			if !reflect.DeepEqual(expected, agg) {

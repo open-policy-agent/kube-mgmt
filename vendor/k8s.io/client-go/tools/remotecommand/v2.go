@@ -23,8 +23,8 @@ import (
 	"net/http"
 	"sync"
 
+	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/client-go/pkg/api/v1"
 )
 
 // streamProtocolV2 implements version 2 of the streaming protocol for attach
@@ -101,7 +101,7 @@ func (p *streamProtocolV2) copyStdin() {
 			// the executed command will remain running.
 			defer once.Do(func() { p.remoteStdin.Close() })
 
-			if _, err := io.Copy(p.remoteStdin, p.Stdin); err != nil {
+			if _, err := io.Copy(p.remoteStdin, readerWrapper{p.Stdin}); err != nil {
 				runtime.HandleError(err)
 			}
 		}()
