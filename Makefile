@@ -7,7 +7,7 @@ COMMIT := $(shell ./build/get-build-commit.sh)
 
 IMAGE := $(REGISTRY)/$(BIN)
 
-BUILD_IMAGE ?= golang:1.8-alpine
+BUILD_IMAGE ?= golang:1.12-alpine
 
 .PHONY: all
 all: image
