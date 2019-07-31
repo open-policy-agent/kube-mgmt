@@ -11,6 +11,7 @@ import (
 	"os"
 	"path"
 	"strings"
+	"time"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/open-policy-agent/kube-mgmt/pkg/admission"
@@ -42,6 +43,7 @@ type params struct {
 	replicateCluster                    gvkFlag
 	replicateNamespace                  gvkFlag
 	replicatePath                       string
+	replicateResync                     time.Duration
 	registerAdmissionController         bool
 	admissionControllerName             string
 	admissionControllerCACertFile       string
@@ -107,6 +109,7 @@ func main() {
 	rootCmd.Flags().VarP(&params.replicateNamespace, "replicate", "", "replicate namespace-level resources")
 	rootCmd.Flags().VarP(&params.replicateCluster, "replicate-cluster", "", "replicate cluster-level resources")
 	rootCmd.Flags().StringVarP(&params.replicatePath, "replicate-path", "", "kubernetes", "set path to replicate data into")
+	rootCmd.Flags().DurationVar(&params.replicateResync, "replicate-resync", 60*time.Second, "resend all PUT messages at this interval")
 
 	// Admission control options.
 	rootCmd.Flags().BoolVarP(&params.registerAdmissionController, "register-admission-controller", "", false, "register OPA as an admission controller")
@@ -166,7 +169,7 @@ func run(params *params) {
 	}
 
 	for _, gvk := range params.replicateCluster {
-		sync := data.New(kubeconfig, opa.New(params.opaURL, params.opaAuth).Prefix(params.replicatePath), getResourceType(gvk, false))
+		sync := data.New(kubeconfig, opa.New(params.opaURL, params.opaAuth).Prefix(params.replicatePath), getResourceType(gvk, false), params.replicateResync)
 		_, err := sync.Run()
 		if err != nil {
 			logrus.Fatalf("Failed to start data sync for %v: %v", gvk, err)
@@ -174,7 +177,7 @@ func run(params *params) {
 	}
 
 	for _, gvk := range params.replicateNamespace {
-		sync := data.New(kubeconfig, opa.New(params.opaURL, params.opaAuth).Prefix(params.replicatePath), getResourceType(gvk, true))
+		sync := data.New(kubeconfig, opa.New(params.opaURL, params.opaAuth).Prefix(params.replicatePath), getResourceType(gvk, true), params.replicateResync)
 		_, err := sync.Run()
 		if err != nil {
 			logrus.Fatalf("Failed to start data sync for %v: %v", gvk, err)

@@ -21,19 +21,19 @@ import (
 
 // GenericSync replicates Kubernetes resources into OPA as raw JSON.
 type GenericSync struct {
-	kubeconfig *rest.Config
-	opa        opa_client.Data
-	ns         types.ResourceType
+	kubeconfig   *rest.Config
+	opa          opa_client.Data
+	ns           types.ResourceType
+	resyncPeriod time.Duration
 }
 
 const (
-	resyncPeriod        = time.Second * 60
 	syncResetBackoffMin = time.Second
 	syncResetBackoffMax = time.Second * 30
 )
 
 // New returns a new GenericSync that cna be started.
-func New(kubeconfig *rest.Config, opa opa_client.Data, ns types.ResourceType) *GenericSync {
+func New(kubeconfig *rest.Config, opa opa_client.Data, ns types.ResourceType, resyncPeriod time.Duration) *GenericSync {
 	cpy := *kubeconfig
 	if ns.Group == "" {
 		cpy.APIPath = "/api"
@@ -46,9 +46,10 @@ func New(kubeconfig *rest.Config, opa opa_client.Data, ns types.ResourceType) *G
 	}
 	cpy.NegotiatedSerializer = dynamic.ContentConfig().NegotiatedSerializer
 	return &GenericSync{
-		kubeconfig: &cpy,
-		ns:         ns,
-		opa:        opa.Prefix(ns.Resource),
+		kubeconfig:   &cpy,
+		ns:           ns,
+		opa:          opa.Prefix(ns.Resource),
+		resyncPeriod: resyncPeriod,
 	}
 }
 
@@ -68,7 +69,7 @@ func (s *GenericSync) Run() (chan struct{}, error) {
 	store, controller := cache.NewInformer(
 		source,
 		&unstructured.Unstructured{},
-		resyncPeriod,
+		s.resyncPeriod,
 		cache.ResourceEventHandlerFuncs{
 			AddFunc:    s.syncAdd,
 			UpdateFunc: s.update,
@@ -93,7 +94,7 @@ func (s *GenericSync) syncAdd(obj interface{}) {
 		path = u.GetNamespace() + "/" + name
 	}
 	if err := s.opa.PutData(path, u); err != nil {
-		logrus.Errorf("Failed to add or update %v/%v (will reset OPA data and resync in %v): %v", s.ns, path, resyncPeriod, err)
+		logrus.Errorf("Failed to add or update %v/%v (will reset OPA data and resync in %s): %v", s.ns, path, s.resyncPeriod.String(), err)
 		s.syncReset()
 	}
 }
@@ -111,7 +112,7 @@ func (s *GenericSync) syncRemove(obj interface{}) {
 		path = u.GetNamespace() + "/" + name
 	}
 	if err := s.opa.PatchData(path, "remove", nil); err != nil {
-		logrus.Errorf("Failed to remove %v/%v (will reset OPA data and resync in %v): %v", s.ns, path, resyncPeriod, err)
+		logrus.Errorf("Failed to remove %v/%v (will reset OPA data and resync in %s): %v", s.ns, path, s.resyncPeriod.String(), err)
 		s.syncReset()
 	}
 }
@@ -120,7 +121,7 @@ func (s *GenericSync) syncReset() {
 	d := syncResetBackoffMin
 	for {
 		if err := s.opa.PutData("/", map[string]interface{}{}); err != nil {
-			logrus.Errorf("Failed to reset OPA data for %v (will retry after %v): %v", s.ns, d, err)
+			logrus.Errorf("Failed to reset OPA data for %v (will retry after %s): %v", s.ns, d.String(), err)
 		} else {
 			return
 		}
