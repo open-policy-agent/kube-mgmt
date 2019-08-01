@@ -25,6 +25,8 @@ type GenericSync struct {
 	opa          opa_client.Data
 	ns           types.ResourceType
 	resyncPeriod time.Duration
+	controller   cache.Controller
+	store        cache.Store
 }
 
 const (
@@ -66,7 +68,7 @@ func (s *GenericSync) Run() (chan struct{}, error) {
 		s.ns.Resource,
 		api.NamespaceAll,
 		fields.Everything())
-	store, controller := cache.NewInformer(
+	s.store, s.controller = cache.NewInformer(
 		source,
 		&unstructured.Unstructured{},
 		s.resyncPeriod,
@@ -75,11 +77,13 @@ func (s *GenericSync) Run() (chan struct{}, error) {
 			UpdateFunc: s.update,
 			DeleteFunc: s.syncRemove,
 		})
-	for _, obj := range store.List() {
-		s.syncAdd(obj)
-	}
-	go controller.Run(quit)
+	go s.controller.Run(quit)
 	return quit, nil
+}
+
+// Returns the controller for this syncer
+func (s *GenericSync) Controller() cache.Controller {
+	return s.controller
 }
 
 func (s *GenericSync) update(_, obj interface{}) {
@@ -87,16 +91,29 @@ func (s *GenericSync) update(_, obj interface{}) {
 }
 
 func (s *GenericSync) syncAdd(obj interface{}) {
+	if path, err := s.put(obj); err != nil {
+		logrus.Errorf("Failed to add or update %v/%v (will reset OPA data and resync in %s): %v", s.ns, path, s.resyncPeriod.String(), err)
+		s.syncReset()
+	}
+}
+
+func (s *GenericSync) addAll() error {
+	for _, obj := range s.store.List() {
+		if _, err := s.put(obj); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *GenericSync) put(obj interface{}) (string, error) {
 	u := obj.(*unstructured.Unstructured)
 	name := u.GetName()
 	var path = u.GetName()
 	if s.ns.Namespaced {
 		path = u.GetNamespace() + "/" + name
 	}
-	if err := s.opa.PutData(path, u); err != nil {
-		logrus.Errorf("Failed to add or update %v/%v (will reset OPA data and resync in %s): %v", s.ns, path, s.resyncPeriod.String(), err)
-		s.syncReset()
-	}
+	return path, s.opa.PutData(path, u)
 }
 
 func (s *GenericSync) syncRemove(obj interface{}) {
@@ -123,7 +140,11 @@ func (s *GenericSync) syncReset() {
 		if err := s.opa.PutData("/", map[string]interface{}{}); err != nil {
 			logrus.Errorf("Failed to reset OPA data for %v (will retry after %s): %v", s.ns, d.String(), err)
 		} else {
-			return
+			if err := s.addAll(); err != nil {
+				logrus.Errorf("Failed to reload OPA data for %v (will retry after %s): %v", s.ns, d.String(), err)
+			} else {
+				return
+			}
 		}
 		time.Sleep(d)
 		d = d * 2

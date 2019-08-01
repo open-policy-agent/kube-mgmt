@@ -25,6 +25,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/clientcmd"
 )
 
@@ -168,12 +169,15 @@ func run(params *params) {
 		}
 	}
 
+	synced := []cache.InformerSynced{}
+
 	for _, gvk := range params.replicateCluster {
 		sync := data.New(kubeconfig, opa.New(params.opaURL, params.opaAuth).Prefix(params.replicatePath), getResourceType(gvk, false), params.replicateResync)
 		_, err := sync.Run()
 		if err != nil {
 			logrus.Fatalf("Failed to start data sync for %v: %v", gvk, err)
 		}
+		synced = append(synced, sync.Controller().HasSynced)
 	}
 
 	for _, gvk := range params.replicateNamespace {
@@ -182,7 +186,11 @@ func run(params *params) {
 		if err != nil {
 			logrus.Fatalf("Failed to start data sync for %v: %v", gvk, err)
 		}
+		synced = append(synced, sync.Controller().HasSynced)
 	}
+
+	quit := make(chan struct{})
+	cache.WaitForCacheSync(quit, synced...)
 
 	var owner metav1.OwnerReference
 
@@ -222,7 +230,6 @@ func run(params *params) {
 		}
 	}
 
-	quit := make(chan struct{})
 	<-quit
 }
 
