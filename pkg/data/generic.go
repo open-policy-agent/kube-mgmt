@@ -6,9 +6,11 @@ package data
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/Sirupsen/logrus"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -144,18 +146,8 @@ func (s *GenericSync) sync(resource dynamic.NamespaceableResourceInterface, quit
 
 	tLoad := time.Now()
 
-	// NOTE(tsandall): currently we reset OPA and load the list result in two
-	// separate transactions. If this is an issue we can revisit this. One
-	// option would be to create a PATCH request that clears the data namespace
-	// and then adds all of the objects.
-	if err := s.syncReset(); err != nil {
+	if err := s.syncAll(result.Items); err != nil {
 		return errOPA(errors.Wrap(err, "reset"))
-	}
-
-	for _, item := range result.Items {
-		if err := s.syncAdd(&item); err != nil {
-			return errOPA(errors.Wrap(err, "list add"))
-		}
 	}
 
 	dLoad := time.Since(tLoad)
@@ -203,31 +195,72 @@ func (s *GenericSync) sync(resource dynamic.NamespaceableResourceInterface, quit
 }
 
 func (s *GenericSync) syncAdd(obj runtime.Object) error {
-	m, err := meta.Accessor(obj)
+	path, err := s.objPath(obj)
 	if err != nil {
 		return err
-	}
-	name := m.GetName()
-	var path = m.GetName()
-	if s.ns.Namespaced {
-		path = m.GetNamespace() + "/" + name
 	}
 	return s.opa.PutData(path, obj)
 }
 
 func (s *GenericSync) syncRemove(obj runtime.Object) error {
-	m, err := meta.Accessor(obj)
+	path, err := s.objPath(obj)
 	if err != nil {
 		return err
-	}
-	name := m.GetName()
-	var path = m.GetName()
-	if s.ns.Namespaced {
-		path = m.GetNamespace() + "/" + name
 	}
 	return s.opa.PatchData(path, "remove", nil)
 }
 
-func (s *GenericSync) syncReset() error {
-	return s.opa.PutData("/", map[string]interface{}{})
+func (s *GenericSync) syncAll(objs []unstructured.Unstructured) error {
+
+	// Build a list of patches to apply.
+	payload, err := s.generateSyncPayload(objs)
+	if err != nil {
+		return err
+	}
+
+	return s.opa.PutData("/", payload)
+}
+
+func (s *GenericSync) generateSyncPayload(objs []unstructured.Unstructured) (map[string]interface{}, error) {
+	combined := make(map[string]interface{}, len(objs))
+	for _, obj := range objs {
+		objPath, err := s.objPath(&obj)
+		if err != nil {
+			return nil, err
+		}
+
+		// Ensure the path in thee map up to our value exists
+		// We make some assumptions about the paths that do exist
+		// being the correct types due to the expected uniform
+		// objPath's for each of the similar object types being
+		// sync'd with the GenericSync instance.
+		segments := strings.Split(objPath, "/")
+		dir := combined
+		for i := 0; i < len(segments) -1; i++ {
+			next, ok := combined[segments[i]]
+			if !ok {
+				next = map[string]interface{}{}
+				dir[segments[i]] = next
+			}
+			dir = next.(map[string]interface{})
+		}
+		dir[segments[len(segments) -1]] = obj.Object
+	}
+
+	return combined, nil
+}
+
+func (s *GenericSync) objPath(obj runtime.Object) (string, error) {
+	m, err := meta.Accessor(obj)
+	if err != nil {
+		return "", err
+	}
+	name := m.GetName()
+	var path string
+	if s.ns.Namespaced {
+		path = m.GetNamespace() + "/" + name
+	} else {
+		path = name
+	}
+	return path, nil
 }
