@@ -1,5 +1,5 @@
 # ![logo](./logo/logo.png) kube-mgmt
-
+1;5202;0c
 Policy-based control for Kubernetes deployments.
 
 ## About
@@ -138,7 +138,9 @@ Kubernetes resources replicated into OPA are layed out as follos:
 For example, to search for services with the label `"foo"` you could write:
 
 ```
-service := data.kubernetes.services[namespace][name].metadata.labels["foo"]
+some namespace, name
+service := data.kubernetes.services[namespace][name]
+service.metadata.labels["foo"]
 ```
 
 An alternative way to visualize the layout is as single JSON document:
