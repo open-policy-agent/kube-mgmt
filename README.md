@@ -1,5 +1,5 @@
 # ![logo](./logo/logo.png) kube-mgmt
-1;5202;0c
+
 Policy-based control for Kubernetes deployments.
 
 ## About
