@@ -105,6 +105,7 @@ func New(kubeconfig *rest.Config, opa opa.Client, matcher func(*v1.ConfigMap) (b
 		scheme.AddKnownTypes(
 			*cpy.GroupVersion,
 			&metav1.ListOptions{},
+			&metav1.Status{},
 			&v1.ConfigMapList{},
 			&v1.ConfigMap{})
 		return nil
