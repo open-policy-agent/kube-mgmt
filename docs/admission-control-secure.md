@@ -145,6 +145,15 @@ kubectl create secret generic inject-policy -n opa --from-file=authz.rego --from
 
 ```
 
+If you have liveness or readiness probes configured on the OPA server for `/health` you will need to add the following `allow` rule to ensure Kubernetes can still access these endpoints. 
+
+```
+# Allow anonymouse access to /health otherwise K8s get 403 and kills pod. 
+allow {
+    input.path = ["health"]
+}
+```
+
 3. Label the `opa-default-system-main` ConfigMap.
 
 ```yaml
