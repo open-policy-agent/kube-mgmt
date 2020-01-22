@@ -169,10 +169,16 @@ func (s *Sync) add(obj interface{}) {
 	}
 }
 
-func (s *Sync) update(_, obj interface{}) {
+func (s *Sync) update(oldObj, obj interface{}) {
 	cm := obj.(*v1.ConfigMap)
 	if match, isPolicy := s.matcher(cm); match {
 		s.syncAdd(cm, isPolicy)
+	} else {
+		// check if the label was removed
+		oldCm := oldObj.(*v1.ConfigMap)
+		if match, isPolicy := s.matcher(oldCm); match {
+			s.syncRemove(oldCm, isPolicy)
+		}
 	}
 }
 
