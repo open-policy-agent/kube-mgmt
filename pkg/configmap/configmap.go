@@ -131,12 +131,10 @@ func (s *Sync) Run(namespaces []string) (chan struct{}, error) {
 	}
 	quit := make(chan struct{})
 
-	if namespaces[0] == "*" {
-		namespaces[0] = v1.NamespaceAll
-		namespaces = namespaces[0:1]
-	}
-
 	for _, namespace := range namespaces {
+		if namespace == "*" {
+			namespace = v1.NamespaceAll
+		}
 		source := cache.NewListWatchFromClient(
 			client,
 			"configmaps",
