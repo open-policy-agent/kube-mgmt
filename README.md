@@ -78,7 +78,7 @@ Enable data loading by specifying the `--enable-data` command-line flag to
 `kube-mgmt`. If data loading is enabled `kube-mgmt` will load JSON out of
 ConfigMaps labelled with `openpolicyagent.org/data=opa`.
 
-Data loaded out of ConfigMaps is layed out as follows:
+Data loaded out of ConfigMaps is laid out as follows:
 
 ```
 <namespace>/<name>/<key>
@@ -121,7 +121,7 @@ Replication is enabled with the following options:
 --replicate-cluster=<[group/]version/resource>
 ```
 
-Kubernetes resources replicated into OPA are layed out as follos:
+Kubernetes resources replicated into OPA are laid out as follows:
 
 ```
 <replicate-path>/<resource>/<namespace>/<name> # namespace scoped
