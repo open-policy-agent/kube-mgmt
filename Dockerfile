@@ -1,4 +1,4 @@
-FROM alpine
+FROM alpine:3.11.5
 
 MAINTAINER Torin Sandall torinsandall@gmail.com
 
