@@ -78,6 +78,8 @@ Enable data loading by specifying the `--enable-data` command-line flag to
 `kube-mgmt`. If data loading is enabled `kube-mgmt` will load JSON out of
 ConfigMaps labelled with `openpolicyagent.org/data=opa`.
 
+> The JSON data ConfigMaps must be in namespaces listed in the `--policies` option.
+
 Data loaded out of ConfigMaps is laid out as follows:
 
 ```
