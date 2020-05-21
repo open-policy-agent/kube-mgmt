@@ -15,5 +15,5 @@ function is_travis_release_env() {
   #   return 0
   # fi
   # return 1
-  return 0
+  return 1
 }
