@@ -1,6 +1,6 @@
 BIN := kube-mgmt
 PKG := github.com/open-policy-agent/kube-mgmt
-REGISTRY ?= pietervicloudcom
+REGISTRY ?= open-policy-agent
 VERSION := 0.12-dev
 ARCH := amd64
 OS := linux
