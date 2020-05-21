@@ -1,6 +1,6 @@
 BIN := kube-mgmt
 PKG := github.com/open-policy-agent/kube-mgmt
-REGISTRY ?= open-policy-agent
+REGISTRY ?= openpolicyagent
 VERSION := 0.12-dev
 ARCH := amd64
 OS := linux
