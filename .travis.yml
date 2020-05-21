@@ -14,13 +14,10 @@ install:
   - docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
   - docker buildx create --name xbuilder --use
 after_success:
-- source ./build/travis-utils.sh
-- docker login -u $DOCKER_USER -p $DOCKER_PASSWORD
-- make push
-- make push-latest
-# - if is_travis_push_env; then docker login -u $DOCKER_USER -p $DOCKER_PASSWORD; fi
-# - if is_travis_push_env; then make push; fi
-# - if is_travis_release_env; then make push-latest; fi
+  - source ./build/travis-utils.sh
+  - if is_travis_push_env; then docker login -u $DOCKER_USER -p $DOCKER_PASSWORD; fi
+  - if is_travis_push_env; then make push; fi
+  - if is_travis_release_env; then make push-latest; fi
 env:
   global:
   - secure: k/I694fyeCLB3V25PphikqkAZ49Il8PScGc9kkUcuL8E7i3WmUMiVgp+6J4tlUKUmJI07U8eZIolqhMMskKRDfBcQd/UzG0V+MTeY29JXj8aLZyylKsbNksbY6bnC/U7sSRkvYXiwznWo4C9/Fks8KAHVDPBejAAgkqL+vdCJZ6HypmbIZLbJGZsANQ9b4AE1MyLJ6mQKy0JO6W6ovOQLpfKAxhseJXvg9zePGfxjmioN1+lN5u90CQmDXs7ZT7K5/QwEGBhb6AJe8j5yHL1+qNmcWkBxg8x9fkJ6vuciW29mfKRLsY1wioPmKldSUBO+Z7HmHA2YgHPSNuZqfK3vEBFPXWGpjyGrC8Q6Sijb6LMextyZTt4EmRRvfLFoN3K9ZC7VZjk/m3aqGnhq6HTyMOSMpQIIfmH6SxG2x786H3duBHkXfz4ldsTlR1bk2fv9Ur1lNNy1E66ZQIi5XQp+B6Kd+elNw7UnDU5IgrxzgVTmAS9DLWgxHBYy66Wf3CJAfSxZ1sNARDwRMXM0CvtRoy2nlDvo5sgCoMlw0h/zEXP0rrGm/PBzsLoi6UJ4sN3K86Z2L0oR08Jt+TSDzj7nPYPO72rGPRQ1eJN3It5FUjrDTwWBEQk+It8JNJwId+Aa1aBbsSjX+HlxOtK+dkLgnjcICXov7YaC4bZy8ADfVY=
