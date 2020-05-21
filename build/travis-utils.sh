@@ -5,7 +5,7 @@ function is_travis_push_env() {
     #     return 0
     # fi
     # return 1
-    return 0
+    return 1
 }
 
 # Travis-CI sets TRAVIS_TAG=<tag> when the build is triggered for a tag.
