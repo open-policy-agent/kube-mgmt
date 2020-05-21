@@ -30,8 +30,6 @@ build-linux-amd64:
 
 .PHONY: build-linux-armv6
 build-linux-armv6:
-	whoami
-	mkdir -p ./bin/linux_arm/linux_arm
 	make build OS=linux ARCH=arm
 	cp -f ./bin/linux_arm/linux_arm/kube-mgmt ./bin/linux_arm
 
