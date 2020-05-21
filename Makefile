@@ -31,7 +31,6 @@ build-linux-amd64:
 .PHONY: build-linux-armv6
 build-linux-armv6:
 	make build OS=linux ARCH=arm
-	cp -f ./bin/linux_arm/linux_arm/kube-mgmt ./bin/linux_arm
 
 .PHONY: image
 image: build-linux-amd64 build-linux-armv6 
