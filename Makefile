@@ -31,14 +31,11 @@ build-linux-amd64:
 .PHONY: build-linux-armv6
 build-linux-armv6:
 	make build OS=linux ARCH=arm
-	mkdir -pv $$(pwd)/bin/linux_armv6
-	cp $$(pwd)/bin/linux_arm/linux_arm/* $$(pwd)/bin/linux_armv6
-	rm -rf $$(pwd)/bin/linux_arm
 
 .PHONY: image
 image: build-linux-amd64 build-linux-armv6 
 	docker buildx build -t $(IMAGE):$(VERSION)-linux-amd64 -f Dockerfile --platform linux/amd64 --build-arg OS=linux --build-arg ARCH=amd64 .
-	docker buildx build -t $(IMAGE):$(VERSION)-linux-armv6 -f Dockerfile --platform linux/arm/v6 --build-arg OS=linux --build-arg ARCH=armv6 .
+	docker buildx build -t $(IMAGE):$(VERSION)-linux-armv6 -f Dockerfile --platform linux/arm/v6 --build-arg OS=linux --build-arg ARCH=arm .
 
 .PHONY: clean
 clean:
