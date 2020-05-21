@@ -31,8 +31,8 @@ build-linux-amd64:
 .PHONY: build-linux-armv6
 build-linux-armv6:
 	make build OS=linux ARCH=arm
-	mv $$(pwd)/bin/linux_arm/linux_arm/* $$(pwd)/bin/linux_arm
-	rm -rf $$(pwd)/bin/linux_arm/linux_arm
+	mv ./bin/linux_arm/linux_arm/* ./bin/linux_arm
+	rm -rf ./bin/linux_arm/linux_arm
 
 .PHONY: image
 image: build-linux-amd64 build-linux-armv6 
