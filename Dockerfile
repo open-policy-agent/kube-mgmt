@@ -2,10 +2,9 @@ FROM alpine
 
 MAINTAINER Torin Sandall torinsandall@gmail.com
 
-ARG OS=linux
-ARG ARCH=amd64
+ARG SOURCE=bin/linux_amd64/
 
-ADD bin/${OS}_${ARCH}/kube-mgmt /kube-mgmt
+ADD ${SOURCE}/kube-mgmt /kube-mgmt
 
 USER 1000
 
