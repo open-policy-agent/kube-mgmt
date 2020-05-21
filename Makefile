@@ -19,10 +19,10 @@ build:
 		-v $$(pwd)/.go:/go \
 		-v $$(pwd):/go/src/$(PKG) \
 		-v $$(pwd)/bin/$(OS)_$(ARCH):/go/bin \
-		-v $$(pwd)/.go/std/$(ARCH):/usr/local/go/pkg/linux_$(ARCH)_static \
+		-v $$(pwd)/.go/std/$(ARCH):/usr/local/go/pkg/$(OS)_$(ARCH)_static \
 		-w /go/src/$(PKG) \
 		$(BUILD_IMAGE) \
-		/bin/sh -c "OS=$(OS) ARCH=$(ARCH) VERSION=$(VERSION) COMMIT=$(COMMIT) PKG=$(PKG) ./build/build.sh"
+		/bin/sh -c "GOOS=$(OS) GOARCH=$(ARCH) VERSION=$(VERSION) COMMIT=$(COMMIT) PKG=$(PKG) ./build/build.sh"
 
 .PHONY: build-linux-amd64
 build-linux-amd64:
@@ -31,6 +31,7 @@ build-linux-amd64:
 .PHONY: build-linux-armv6
 build-linux-armv6:
 	make build OS=linux ARCH=arm
+	sudo chown -R $(id -u):$(id -g) ./bin
 	mv ./bin/linux_arm/linux_arm/* ./bin/linux_arm
 	rm -rf ./bin/linux_arm/linux_arm
 
