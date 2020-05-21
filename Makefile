@@ -1,8 +1,9 @@
 BIN := kube-mgmt
 PKG := github.com/open-policy-agent/kube-mgmt
-REGISTRY ?= openpolicyagent
+REGISTRY ?= pietervicloudcom
 VERSION := 0.12-dev
 ARCH := amd64
+OS := linux
 COMMIT := $(shell ./build/get-build-commit.sh)
 
 IMAGE := $(REGISTRY)/$(BIN)
@@ -17,16 +18,27 @@ build:
 	docker run -it \
 		-v $$(pwd)/.go:/go \
 		-v $$(pwd):/go/src/$(PKG) \
-		-v $$(pwd)/bin/linux_$(ARCH):/go/bin \
+		-v $$(pwd)/bin/$(OS)_$(ARCH):/go/bin \
 		-v $$(pwd)/.go/std/$(ARCH):/usr/local/go/pkg/linux_$(ARCH)_static \
 		-w /go/src/$(PKG) \
 		$(BUILD_IMAGE) \
-		/bin/sh -c "ARCH=$(ARCH) VERSION=$(VERSION) COMMIT=$(COMMIT) PKG=$(PKG) ./build/build.sh"
+		/bin/sh -c "OS=$(OS) ARCH=$(ARCH) VERSION=$(VERSION) COMMIT=$(COMMIT) PKG=$(PKG) ./build/build.sh"
+
+.PHONY: build-linux-amd64
+build-linux-amd64:
+	make build OS=linux ARCH=amd64
+
+.PHONY: build-linux-armv6
+build-linux-armv6:
+	make build OS=linux ARCH=arm
+	mkdir -pv $$(pwd)/bin/linux_armv6
+	cp $$(pwd)/bin/linux_arm/linux_arm/* $$(pwd)/bin/linux_armv6
+	rm -rf $$(pwd)/bin/linux_arm
 
 .PHONY: image
-image: build
-	docker build -t $(IMAGE):$(VERSION) -f Dockerfile .
-	docker tag $(IMAGE):$(VERSION) $(IMAGE):latest
+image: build-linux-amd64 build-linux-armv6 
+	docker buildx build -t $(IMAGE):$(VERSION)-linux-amd64 -f Dockerfile --platform linux/amd64 --build-arg OS=linux --build-arg ARCH=amd64 .
+	docker buildx build -t $(IMAGE):$(VERSION)-linux-armv6 -f Dockerfile --platform linux/arm/v6 --build-arg OS=linux --build-arg ARCH=armv6 .
 
 .PHONY: clean
 clean:
@@ -45,11 +57,16 @@ up: image undeploy deploy
 
 .PHONY: push
 push:
-	docker push $(IMAGE):$(VERSION)
+	docker push $(IMAGE):$(VERSION)-linux-amd64
+	docker push $(IMAGE):$(VERSION)-linux-armv6
+
+	docker manifest create $(IMAGE):$(VERSION) $(IMAGE):$(VERSION)-linux-amd64 $(IMAGE):$(VERSION)-linux-armv6
+	docker manifest push --purge $(IMAGE):$(VERSION)
 
 .PHONY: push-latest
 push-latest:
-	docker push $(IMAGE):latest
+	docker manifest create $(IMAGE):latest $(IMAGE):$(VERSION)-linux-amd64 $(IMAGE):$(VERSION)-linux-armv6
+	docker manifest push --purge $(IMAGE):latest
 
 .PHONY: version
 version:
