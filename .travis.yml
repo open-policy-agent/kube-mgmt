@@ -4,6 +4,9 @@ go:
 - 1.8
 services:
 - docker
+# To use docker buildx for multi architexture builds, the latest version of
+# docker must be installed and the experimental features enabled.
+# Refer to: https://medium.com/@quentin.mcgaw/cross-architecture-docker-builds-with-travis-ci-arm-s390x-etc-8f754e20aaef
 before_install:
 - curl -fsSL https://get.docker.com | sh
 - echo '{"experimental":"enabled"}' | sudo tee /etc/docker/daemon.json
