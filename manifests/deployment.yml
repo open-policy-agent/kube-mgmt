@@ -1,3 +1,9 @@
+# Create a Service Account for OPA
+kind: ServiceAccount
+apiVersion: v1
+metadata:
+  name: opa
+
 # Grant OPA/kube-mgmt read-only access to resources. This lets kube-mgmt
 # list configmaps to be loaded into OPA as policies.
 kind: ClusterRoleBinding
@@ -51,6 +57,7 @@ spec:
       labels:
         app: opa
     spec:
+      serviceAccountName: opa
       containers:
       - name: opa
         image: openpolicyagent/opa
