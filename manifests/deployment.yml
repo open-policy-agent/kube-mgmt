@@ -40,11 +40,14 @@ subjects:
   apiGroup: rbac.authorization.k8s.io
 ---
 # Deploy OPA and kube-mgmt.
-apiVersion: extensions/v1beta1
+apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: opa
 spec:
+  selector:
+    matchLabels:
+      app: opa
   replicas: 1
   template:
     metadata:
