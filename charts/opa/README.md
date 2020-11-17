@@ -22,7 +22,13 @@ If you just want to see something run, install the chart without any
 configuration.
 
 ```bash
-helm install stable/opa
+$ helm repo add open-policy-agent https://open-policy-agent.github.io/kube-mgmt/charts
+"open-policy-agent" has been added to your repositories
+$ helm repo update
+...Successfully got an update from the "open-policy-agent" chart repository
+...Successfully got an update from the "stable" chart repository
+Update Complete. ⎈Happy Helming!⎈
+$ helm install stable/opa
 ```
 
 Once installed, the OPA will download a sample bundle from
