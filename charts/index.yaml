@@ -3,11 +3,10 @@ entries:
   opa:
   - apiVersion: v1
     appVersion: 0.15.1
-    created: "2020-11-17T16:44:36.639081381Z"
-    deprecated: true
-    description: DEPRECATED - Open source, general-purpose policy engine. Enforce
-      fine-grained invariants over arbitrary Kubernetes resources.
-    digest: 8dd0f921bbeadd2596c24ec56c0a4e1708cded5ed205ab20e20385ba667473e4
+    created: "2020-11-17T16:51:00.388571774Z"
+    description: Open source, general-purpose policy engine. Enforce fine-grained
+      invariants over arbitrary Kubernetes resources.
+    digest: 22a06f7ea1db2b67656fbdb797e54e21b473b7eb539d0f476364fc30b70e90e7
     home: https://www.openpolicyagent.org
     icon: https://raw.githubusercontent.com/open-policy-agent/opa/master/logo/logo.png
     keywords:
@@ -17,12 +16,13 @@ entries:
     name: opa
     sources:
     - https://github.com/open-policy-agent/opa
+    - https://github.com/open-policy-agent/kube-mgmt
     urls:
     - https://open-policy-agent.github.io/kube-mgmt/charts/opa-1.14.6.tgz
     version: 1.14.6
   - apiVersion: v1
     appVersion: 0.15.1
-    created: "2020-11-17T16:44:36.637697476Z"
+    created: "2020-11-17T16:51:00.387188872Z"
     description: Open source, general-purpose policy engine. Enforce fine-grained
       invariants over arbitrary Kubernetes resources.
     digest: 480b39da0fa70dc289fda9607bb9f5e39b6627967bb9bf67321abc0ee8ad9b89
@@ -41,4 +41,4 @@ entries:
     urls:
     - https://open-policy-agent.github.io/kube-mgmt/charts/opa-1.14.0.tgz
     version: 1.14.0
-generated: "2020-11-17T16:44:36.635854669Z"
+generated: "2020-11-17T16:51:00.385326969Z"
