@@ -19,9 +19,5 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Publish Helm chart
-        uses: stefanprodan/helm-gh-pages@v1.2.0
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          charts_dir: charts
-          target_dir: charts
-          linting: off
+        run: |
+          build/helm-gh-pages.sh "${{ secrets.GITHUB_TOKEN }}" "" "" "" "" "" "charts" "" "off"
