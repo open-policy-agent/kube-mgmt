@@ -1,0 +1,16 @@
+name: Build
+
+on:
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build_and_push:
+    name: Build
+    runs-on: ubuntu-18.04
+    steps:
+    - name: Check out code
+      uses: actions/checkout@v2
+
+    - name: Make
+      run: make
