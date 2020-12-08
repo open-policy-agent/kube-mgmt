@@ -14,7 +14,7 @@ all: image
 
 .PHONY: build
 build:
-	docker run -it \
+	docker run \
 		-v $$(pwd)/.go:/go \
 		-v $$(pwd):/go/src/$(PKG) \
 		-v $$(pwd)/bin/linux_$(ARCH):/go/bin \
