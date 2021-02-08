@@ -6,7 +6,10 @@ package main
 
 import (
 	"fmt"
+	"crypto/tls"
+	"crypto/x509"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"path"
 	"strings"
@@ -29,6 +32,8 @@ type params struct {
 	opaURL             string
 	opaAuth            string
 	opaAuthFile        string
+	opaCAFile          string
+	opaAllowInsecure   bool
 	podName            string
 	podNamespace       string
 	enablePolicies     bool
@@ -64,6 +69,8 @@ func main() {
 	rootCmd.Flags().StringVarP(&params.opaURL, "opa-url", "", "http://localhost:8181/v1", "set URL of OPA API endpoint")
 	rootCmd.Flags().StringVarP(&params.opaAuth, "opa-auth-token", "", "", "set authentication token for OPA API endpoint")
 	rootCmd.Flags().StringVarP(&params.opaAuthFile, "opa-auth-token-file", "", "", "set file containing authentication token for OPA API endpoint")
+	rootCmd.Flags().StringVarP(&params.opaCAFile, "opa-ca-file", "", "", "set file containing certificate authority for OPA certificate")
+	rootCmd.Flags().BoolVarP(&params.opaAllowInsecure, "opa-allow-insecure", "", false, "allow insecure https connections to OPA")
 	rootCmd.Flags().StringVarP(&params.podName, "pod-name", "", "", "set pod name (required for admission registration ownership)")
 	rootCmd.Flags().StringVarP(&params.podNamespace, "pod-namespace", "", "", "set pod namespace (required for admission registration ownership)")
 
@@ -104,6 +111,27 @@ func run(params *params) {
 			logrus.Fatalf("Failed to read opa auth token file %s", params.opaAuthFile)
 		}
 		params.opaAuth = strings.Split(string(file), "\n")[0]
+	}
+
+	if params.opaAllowInsecure || params.opaCAFile != "" {
+		config := &tls.Config{InsecureSkipVerify: params.opaAllowInsecure}
+
+		if params.opaCAFile != "" {
+			rootCAs, _ := x509.SystemCertPool()
+			if rootCAs == nil {
+				rootCAs = x509.NewCertPool()
+			}
+			certs, err := ioutil.ReadFile(params.opaCAFile)
+			if err != nil {
+				logrus.Fatalf("Failed to read opa certificate authority file %s", params.opaCAFile)
+			}
+			if ok := rootCAs.AppendCertsFromPEM(certs); !ok {
+				logrus.Println("No certs appended, using system certs only")
+			}
+			config.RootCAs = rootCAs
+		}
+
+		http.DefaultTransport.(*http.Transport).TLSClientConfig = config
 	}
 
 	if params.enablePolicies || params.enableData {
