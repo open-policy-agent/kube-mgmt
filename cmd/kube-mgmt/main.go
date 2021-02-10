@@ -113,24 +113,28 @@ func run(params *params) {
 		params.opaAuth = strings.Split(string(file), "\n")[0]
 	}
 
-	if params.opaAllowInsecure || params.opaCAFile != "" {
+	if params.opaAllowInsecure && params.opaCAFile != "" {
+		logrus.Fatalf("You can not use both --opa-allow-insecure and --opa-ca-file")
+	}
+
+	if params.opaAllowInsecure {
 		config := &tls.Config{InsecureSkipVerify: params.opaAllowInsecure}
+		http.DefaultTransport.(*http.Transport).TLSClientConfig = config
+	}
 
-		if params.opaCAFile != "" {
-			rootCAs, _ := x509.SystemCertPool()
-			if rootCAs == nil {
-				rootCAs = x509.NewCertPool()
-			}
-			certs, err := ioutil.ReadFile(params.opaCAFile)
-			if err != nil {
-				logrus.Fatalf("Failed to read opa certificate authority file %s", params.opaCAFile)
-			}
-			if ok := rootCAs.AppendCertsFromPEM(certs); !ok {
-				logrus.Println("No certs appended, using system certs only")
-			}
-			config.RootCAs = rootCAs
+	if params.opaCAFile != "" {
+		rootCAs, _ := x509.SystemCertPool()
+		if rootCAs == nil {
+			rootCAs = x509.NewCertPool()
 		}
-
+		certs, err := ioutil.ReadFile(params.opaCAFile)
+		if err != nil {
+			logrus.Fatalf("Failed to read opa certificate authority file %s", params.opaCAFile)
+		}
+		if ok := rootCAs.AppendCertsFromPEM(certs); !ok {
+			logrus.Println("No certs appended, using system certs only")
+		}
+		config := &tls.Config{RootCAs: rootCAs}
 		http.DefaultTransport.(*http.Transport).TLSClientConfig = config
 	}
 
