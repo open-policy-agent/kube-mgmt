@@ -1,6 +1,6 @@
 {{- $cn := printf "%s.%s.svc" ( include "opa.fullname" . ) .Release.Namespace }}
 {{- $ca := genCA "opa-admission-ca" 3650 -}}
-{{- $cert := genSignedCert $cn nil nil 3650 $ca -}}
+{{- $cert := genSignedCert $cn nil (list $cn) 3650 $ca -}}
 kind: {{ .Values.admissionControllerKind }}
 apiVersion: admissionregistration.k8s.io/v1beta1
 metadata:
