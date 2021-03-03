@@ -100,12 +100,15 @@ data:
   x.json: |
     {"a": [1,2,3,4]}
 ```
+Note: "x.json" may be any key.
 
 You could refer to the data inside your policies as follows:
 
 ```ruby
 data.opa["hello-data"]["x.json"].a[0]  # evaluates to 1
 ```
+Note: "opa" is the namespace for the configMap.
+You may mock this in a test like other objects: `with data.opa as my_mocked_object`.
 
 ## Caching
 
