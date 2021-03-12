@@ -5,9 +5,9 @@
 package main
 
 import (
-	"fmt"
 	"crypto/tls"
 	"crypto/x509"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -34,6 +34,8 @@ type params struct {
 	opaAuthFile        string
 	opaCAFile          string
 	opaAllowInsecure   bool
+	policyLabel        string
+	policyValue        string
 	podName            string
 	podNamespace       string
 	enablePolicies     bool
@@ -73,6 +75,8 @@ func main() {
 	rootCmd.Flags().BoolVarP(&params.opaAllowInsecure, "opa-allow-insecure", "", false, "allow insecure https connections to OPA")
 	rootCmd.Flags().StringVarP(&params.podName, "pod-name", "", "", "set pod name (required for admission registration ownership)")
 	rootCmd.Flags().StringVarP(&params.podNamespace, "pod-namespace", "", "", "set pod namespace (required for admission registration ownership)")
+	rootCmd.Flags().StringVarP(&params.policyLabel, "policy-label", "", "", "replace label openpolicyagent.org/policy")
+	rootCmd.Flags().StringVarP(&params.policyValue, "policy-value", "", "", "replace value rego")
 
 	// Replication options.
 	rootCmd.Flags().BoolVarP(&params.enablePolicies, "enable-policies", "", true, "whether to automatically discover policies from ConfigMaps")
@@ -86,10 +90,21 @@ func main() {
 	rootCmd.Flags().DurationVar(&replicateResync, "replicate-resync", 60*time.Second, "resend all PUT messages at this interval")
 	rootCmd.Flags().MarkDeprecated("replicate-resync", "not applicable")
 
+	rootCmd.PersistentPreRunE = func(cmd *cobra.Command, args []string) error {
+		if rootCmd.Flag("policy-label").Value.String() != "" || rootCmd.Flag("policy-value").Value.String() != "" {
+			_, err := configmap.CustomPolicyLabel(params.policyLabel, params.policyValue)
+			if err != nil {
+				logrus.Fatalf("Invalid --policy-label:%v || --policy-value:%v, %v", params.policyLabel, params.policyValue, err)
+			}
+		}
+		return nil
+	}
+
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
+
 }
 
 func run(params *params) {
