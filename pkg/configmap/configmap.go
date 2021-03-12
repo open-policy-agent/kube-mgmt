@@ -7,6 +7,7 @@ package configmap
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/Sirupsen/logrus"
@@ -14,9 +15,11 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
+	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -24,8 +27,6 @@ import (
 )
 
 const (
-	policyLabelKey            = "openpolicyagent.org/policy"
-	policyLabelValue          = "rego"
 	policyStatusAnnotationKey = "openpolicyagent.org/policy-status"
 
 	dataLabelKey            = "openpolicyagent.org/data"
@@ -39,6 +40,27 @@ const (
 	syncResetBackoffMin = time.Second
 	syncResetBackoffMax = time.Second * 30
 )
+
+var (
+	// policyLabelKey can be replaced by --custom-label option
+	policyLabelKey   = "openpolicyagent.org/policy"
+	policyLabelValue = "rego"
+)
+
+// CustomPolicyLabel allows the default key "openpolicyagent.org/policy"
+// to be replaced by another value. This would allow two instances of kube-mgmt
+// to share a single namepace with config maps for different servers. (ie. validating & mutating)
+func CustomPolicyLabel(key, value string) (string, error) {
+	_, err := labels.NewRequirement(key, selection.Equals, []string{value})
+	if err != nil {
+		return "", err
+	}
+
+	policyLabelKey = key
+	policyLabelValue = value
+	fullLabel := strings.Join([]string{policyLabelKey, policyLabelValue}, "=")
+	return fullLabel, nil
+}
 
 // DefaultConfigMapMatcher returns a function that will match configmaps in
 // specified namespaces and/or with a policy or data label. The first bool return
