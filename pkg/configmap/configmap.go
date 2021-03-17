@@ -41,12 +41,6 @@ const (
 	syncResetBackoffMax = time.Second * 30
 )
 
-var (
-	// policyLabelKey can be replaced by --custom-label option
-	policyLabelKey   = "openpolicyagent.org/policy"
-	policyLabelValue = "rego"
-)
-
 // CustomPolicyLabel allows the default key "openpolicyagent.org/policy"
 // to be replaced by another value. This would allow two instances of kube-mgmt
 // to share a single namepace with config maps for different servers. (ie. validating & mutating)
@@ -56,8 +50,8 @@ func CustomPolicyLabel(key, value string) (string, error) {
 		return "", err
 	}
 
-	policyLabelKey = key
-	policyLabelValue = value
+	policyLabelKey := key
+	policyLabelValue := value
 	fullLabel := strings.Join([]string{policyLabelKey, policyLabelValue}, "=")
 	return fullLabel, nil
 }
@@ -66,7 +60,7 @@ func CustomPolicyLabel(key, value string) (string, error) {
 // specified namespaces and/or with a policy or data label. The first bool return
 // value specifies a policy/data match and the second bool indicates if the configmap
 // contains a policy.
-func DefaultConfigMapMatcher(namespaces []string, requirePolicyLabel, enablePolicies, enableData bool) func(*v1.ConfigMap) (bool, bool) {
+func DefaultConfigMapMatcher(namespaces []string, requirePolicyLabel, enablePolicies, enableData bool, policyLabelKey, policyLabelValue string) func(*v1.ConfigMap) (bool, bool) {
 	return func(cm *v1.ConfigMap) (bool, bool) {
 		var match, isPolicy bool
 
