@@ -28,7 +28,7 @@ $ helm repo update
 ...Successfully got an update from the "open-policy-agent" chart repository
 ...Successfully got an update from the "stable" chart repository
 Update Complete. ⎈Happy Helming!⎈
-$ helm install stable/opa
+$ helm install open-policy-agent/opa
 ```
 
 Once installed, the OPA will download a sample bundle from
