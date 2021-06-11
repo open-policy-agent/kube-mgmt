@@ -183,6 +183,63 @@ To get started with admission control policy enforcement in Kubernetes 1.9 or la
 
 In the [Kubernetes Admission Control](http://www.openpolicyagent.org/docs/kubernetes-admission-control.html) tutorial, OPA is **NOT** running with an authorization policy configured and hence clients can read and write policies in OPA. When deploying OPA in an insecure environment, it is recommended to configure `authentication` and `authorization` on the OPA daemon. For an example of how OPA can be securely deployed as an admission controller see [Admission Control Secure](./docs/admission-control-secure.md).
 
+## OPA API Endpoints and Least-privilege Configuration
+
+`kube-mgmt` is a privileged component that can load policy and data into OPA.
+Other clients connecting to the OPA API only need to query for policy decisions.
+
+To load policy and data into OPA, `kube-mgmt` uses the following OPA API
+endpoints:
+
+* `PUT v1/policy/<path>` - upserting policies
+* `DELETE v1/policy/<path>` - deleting policies
+* `PUT v1/data/<path>` - upserting data
+* `PATCH v1/data/<path>` - updating and removing data
+
+Many users configure OPA with a simple API authorization policy that restricts
+access to the OPA APIs:
+
+```rego
+package system.authz
+
+# Deny access by default.
+default allow = false
+
+# Allow anonymous access to decision `data.example.response`
+#
+# NOTE: the specific decision differs depending on your policies.
+# NOTE: depending on how callers are configured, they may only require this or the default decision below.
+allow {
+    input.path == ["v0", "data", "example", "response"]
+    input.method == "POST"
+}
+
+# Allow anonymous access to default decision.
+allow {
+    input.path == [""]
+    input.method == "POST"
+}
+
+# This is only used for health check in liveness and readiness probe
+allow {
+    input.path == ["health"]
+    input.method == "GET"
+}
+
+# This is only used for prometheus metrics
+allow {
+    input.path == ["metrics"]
+    input.method == "GET"
+}
+
+# This is used by kube-mgmt to PUT/PATCH against /v1/data and PUT/DELETE against /v1/policies.
+#
+# NOTE: The $TOKEN value is replaced at deploy-time with the actual value that kube-mgmt will use. This is typically done by an initContainer.
+allow {
+    input.identity == "$TOKEN"
+}
+```
+
 ## Development Guide
 
 To run all of the tests and build the Docker image run `make` in this directory.
