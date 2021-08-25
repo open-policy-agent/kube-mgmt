@@ -48,29 +48,49 @@ annotations:
 #     mask["/input"]
 bootstrapPolicies: {}
 
-# To enforce mutating policies, change to MutatingWebhookConfiguration.
-admissionControllerKind: ValidatingWebhookConfiguration
+# Admission controller configuration.
+admissionController:
+  enabled: true
 
-# To _fail closed_ on failures, change to Fail. During initial testing, we
-# recommend leaving the failure policy as Ignore.
-admissionControllerFailurePolicy: Ignore
+  # To enforce mutating policies, change to MutatingWebhookConfiguration.
+  kind: ValidatingWebhookConfiguration
 
-# Adds a namespace selector to the admission controller webhook
-admissionControllerNamespaceSelector:
-  matchExpressions:
-    - {key: openpolicyagent.org/webhook, operator: NotIn, values: [ignore]}
+  # To _fail closed_ on failures, change to Fail. During initial testing, we
+  # recommend leaving the failure policy as Ignore.
+  failurePolicy: Ignore
 
-# SideEffectClass for the webhook, setting to None enables dry-run
-admissionControllerSideEffect: Unknown
+  # Adds a namespace selector to the admission controller webhook
+  namespaceSelector:
+    matchExpressions:
+      - {key: openpolicyagent.org/webhook, operator: NotIn, values: [ignore]}
 
-# To restrict the kinds of operations and resources that are subject to OPA
-# policy checks, see the settings below. By default, all resources and
-# operations are subject to OPA policy checks.
-admissionControllerRules:
-  - operations: ["*"]
-    apiGroups: ["*"]
-    apiVersions: ["*"]
-    resources: ["*"]
+  # SideEffectClass for the webhook, setting to None enables dry-run
+  sideEffect: Unknown
+
+  # To restrict the kinds of operations and resources that are subject to OPA
+  # policy checks, see the settings below. By default, all resources and
+  # operations are subject to OPA policy checks.
+  rules:
+    - operations: ["*"]
+      apiGroups: ["*"]
+      apiVersions: ["*"]
+      resources: ["*"]
+
+  # The helm Chart will automatically generate a CA and server certificate for
+  # the OPA. If you want to supply your own certificates, set the field below to
+  # false and add the PEM encoded CA certificate and server key pair below.
+  #
+  # WARNING: The common name name in the server certificate MUST match the
+  # hostname of the service that exposes the OPA to the apiserver. For example.
+  # if the service name is created in the "default" nanamespace with name "opa"
+  # the common name MUST be set to "opa.default.svc".
+  #
+  # If the common name is not set correctly, the apiserver will refuse to
+  # communicate with the OPA.
+  generateCerts: true
+  CA: ""
+  cert: ""
+  key: ""
 
 # Controls a PodDisruptionBudget for the OPA pod. Suggested use if having opa
 # always running for admission control is important
@@ -78,22 +98,6 @@ podDisruptionBudget:
   enabled: false
   minAvailable: 1
 # maxUnavailable: 1
-
-# The helm Chart will automatically generate a CA and server certificate for
-# the OPA. If you want to supply your own certificates, set the field below to
-# false and add the PEM encoded CA certificate and server key pair below.
-#
-# WARNING: The common name name in the server certificate MUST match the
-# hostname of the service that exposes the OPA to the apiserver. For example.
-# if the service name is created in the "default" nanamespace with name "opa"
-# the common name MUST be set to "opa.default.svc".
-#
-# If the common name is not set correctly, the apiserver will refuse to
-# communicate with the OPA.
-generateAdmissionControllerCerts: true
-admissionControllerCA: ""
-admissionControllerCert: ""
-admissionControllerKey: ""
 
 authz:
   # Disable if you don't want authorization.
