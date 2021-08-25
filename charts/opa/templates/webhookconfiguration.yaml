@@ -1,7 +1,8 @@
+{{- if .Values.admissionController.enabled }}
 {{- $cn := printf "%s.%s.svc" ( include "opa.fullname" . ) .Release.Namespace }}
 {{- $ca := genCA "opa-admission-ca" 3650 -}}
 {{- $cert := genSignedCert $cn nil (list $cn) 3650 $ca -}}
-kind: {{ .Values.admissionControllerKind }}
+kind: {{ .Values.admissionController.kind }}
 apiVersion: admissionregistration.k8s.io/v1beta1
 metadata:
   name: {{ template "opa.fullname" . }}
@@ -14,25 +15,25 @@ metadata:
 {{ include "opa.labels.standard" . | indent 4 }}
 webhooks:
   - name: webhook.openpolicyagent.org
-{{- with .Values.admissionControllerNamespaceSelector }}
+{{- with .Values.admissionController.namespaceSelector }}
     namespaceSelector:
 {{ toYaml . | indent 6 }}
 {{ end }}
-    failurePolicy: {{ .Values.admissionControllerFailurePolicy }}
+    failurePolicy: {{ .Values.admissionController.failurePolicy }}
     rules:
-{{ toYaml .Values.admissionControllerRules | indent 6 }}
+{{ toYaml .Values.admissionController.rules | indent 6 }}
     clientConfig:
 {{ if not .Values.certManager.enabled }}
-{{ if .Values.generateAdmissionControllerCerts }}
+{{ if .Values.admissionController.generateCerts }}
       caBundle: {{ b64enc $ca.Cert }}
 {{ else }}
-      caBundle: {{ b64enc .Values.admissionControllerCA }}
+      caBundle: {{ b64enc .Values.admissionController.CA }}
 {{ end }}
 {{ end }}
       service:
         name: {{ template "opa.fullname" . }}
         namespace: {{ .Release.Namespace }}
-    sideEffects: {{ .Values.admissionControllerSideEffect }}
+    sideEffects: {{ .Values.admissionController.sideEffect }}
 {{ if .Values.timeoutSeconds }}
     timeoutSeconds: {{ .Values.timeoutSeconds }}
 {{ end }}
@@ -110,11 +111,13 @@ metadata:
     heritage: "{{ .Release.Service }}"
 type: Opaque
 data:
-{{ if .Values.generateAdmissionControllerCerts }}
+{{ if .Values.admissionController.generateCerts }}
   tls.crt: {{ b64enc $cert.Cert }}
   tls.key: {{ b64enc $cert.Key }}
 {{ else }}
-  tls.crt: {{ b64enc .Values.admissionControllerCert }}
-  tls.key: {{ b64enc .Values.admissionControllerKey }}
+  tls.crt: {{ b64enc .Values.admissionController.cert }}
+  tls.key: {{ b64enc .Values.admissionController.key }}
 {{ end }}
 {{ end }}
+
+{{- end }}
