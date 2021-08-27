@@ -1,2 +1,9 @@
 .git
+charts
+.github
+docs
+examples
+logo
+manifests
+*.md
 

@@ -1,8 +1,23 @@
+FROM golang:1.12-alpine as build
+
+ARG ARCH=amd64
+ARG PKG=github.com/open-policy-agent/kube-mgmt
+ARG VERSION=local
+ARG COMMIT=local
+
+WORKDIR /go/src/${PKG}
+
+COPY . .
+
+RUN set +x && \
+    export GOARCH=${ARCH} && \
+    go install -ldflags "-X ${PKG}/pkg/version.Version=${VERSION} -X ${PKG}/pkg/version.Git=${COMMIT}" ./cmd/kube-mgmt/.../
+
 FROM alpine:3.12.3
 
 MAINTAINER Torin Sandall torinsandall@gmail.com
 
-ADD bin/linux_amd64/kube-mgmt /kube-mgmt
+COPY --from=build /go/bin/kube-mgmt /kube-mgmt
 
 USER 1000
 

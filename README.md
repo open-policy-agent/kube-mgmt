@@ -11,19 +11,9 @@ Policy-based control for Kubernetes deployments.
 
 ## Deployment Guide
 
-### Hello World
+Both OPA and `kube-mgmt` can be installed using Helm chart.
 
-1. Create a new Namespace to deploy OPA into:
-
-    ```bash
-    kubectl create namespace opa
-    ```
-
-1. Create a new Deployment that includes OPA and `kube-mgmt` (`manifests/deployment.yml`):
-
-    ```bash
-    kubectl -n opa create -f https://raw.githubusercontent.com/open-policy-agent/kube-mgmt/master/manifests/deployment.yml
-    ```
+1. Follow [instructions](charts/opa/README.md) to install it into K8s cluster.
 
 1. Define a simple policy (`example.rego`) with the following content:
 
@@ -242,4 +232,16 @@ allow {
 
 ## Development Guide
 
-To run all of the tests and build the Docker image run `make` in this directory.
+1. To run all of the tests and build the Docker image run 
+
+    ```sh 
+    make build
+    ```
+
+1. To create a new release - create and push _annotated tag_ that represent semantic version (without any prefixes)
+
+    ```sh
+    export REL=1.1.1
+    git tag -am "chore: release $REL" $REL
+    git push origin $REL
+    ```

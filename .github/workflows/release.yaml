@@ -1,0 +1,73 @@
+name: Release
+
+on:
+  push:
+    tags: 
+      - '[0-9]+.[0-9]+.[0-9]+'
+
+env:
+  IMAGE: openpolicyagent/kube-mgmt
+
+jobs:
+  docker_job:
+    name: Docker image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v2
+      - name: Calculate release version
+        id: theVersion
+        run: echo "::set-output name=theVersion::$(echo ${GITHUB_REF##*/})"
+      - name: Login to DockerHub
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKER_USER }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+      - name: Build Docker image and Helm chart
+        run: |
+          docker build --build-arg VERSION=${{ env.VERSION }} \
+            --build-arg COMMIT=${{ env.GITHUB_SHA }} \
+            -t ${{ env.IMAGE }}:${{ env.VERSION }} .
+          helm package charts/opa \
+            --version ${{ env.VERSION }}  \
+            --app-version ${{ env.VERSION }}
+        env:
+          VERSION: ${{ steps.theVersion.outputs.theVersion }}
+      - name: Publish Docker image
+        run: |
+          docker push ${{ env.IMAGE }}:${{ env.VERSION }}
+          docker tag ${{ env.IMAGE }}:${{ env.VERSION }}
+ ${{ env.IMAGE }}:latest
+          docker push ${{ env.IMAGE }}:latest
+        env:
+          VERSION: ${{ steps.theVersion.outputs.theVersion }}
+      - name: Upload Helm artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: "helm"
+          path: "opa-${{ steps.theVersion.outputs.theVersion }}.tgz"
+
+  helm_job:
+    name: Helm chart
+    runs-on: ubuntu-latest
+    needs: docker_job
+    steps:
+      - name: checkout gh-pages
+        uses: actions/checkout@v2
+        with:
+          ref: gh-pages
+      - name: Download artifact from build job
+        uses: actions/download-artifact@v2
+        id: download
+        with:
+          name: helm
+          path: /tmp/helm
+      - name: Update Helm index
+        run: |
+          helm repo index /tmp/helm --merge ./charts/index.yaml
+          mv -f /tmp/helm/* ./charts
+      - name: Publish index and chart to GH pages
+        uses: actions-js/push@master
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          branch: gh-pages

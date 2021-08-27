@@ -43,7 +43,7 @@ spec:
 {{- if or .Values.authz.enabled .Values.bootstrapPolicies}}
       initContainers:
         - name: initpolicy
-          image: {{ .Values.mgmt.image }}:{{ .Values.mgmt.imageTag }}
+          image: {{ .Values.mgmt.image }}:{{ coalesce .Values.mgmt.imageTag .Chart.AppVersion }}
           imagePullPolicy: {{ .Values.mgmt.imagePullPolicy }}
           resources:
 {{ toYaml .Values.mgmt.resources | indent 12 }}
@@ -151,7 +151,7 @@ spec:
             periodSeconds: 15
 {{- if .Values.mgmt.enabled }}
         - name: mgmt
-          image: {{ .Values.mgmt.image }}:{{ .Values.mgmt.imageTag }}
+          image: {{ .Values.mgmt.image }}:{{ coalesce .Values.mgmt.imageTag .Chart.AppVersion }}
           imagePullPolicy: {{ .Values.mgmt.imagePullPolicy }}
           resources:
 {{ toYaml .Values.mgmt.resources | indent 12 }}

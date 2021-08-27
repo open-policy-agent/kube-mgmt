@@ -1,16 +1,26 @@
 name: Build
 
 on:
+  push:
+    paths-ignore:
+      - "docs/**"
+      - "logo/**"
+      - "examples/**"
+      - "**.md"
+    branches: 
+      - "master"
+
   pull_request:
-    branches: [ master ]
+    branches: 
+      - "master"
 
 jobs:
-  build_and_push:
+  build_job:
     name: Build
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
     steps:
-    - name: Check out code
-      uses: actions/checkout@v2
-
-    - name: Make
-      run: make
+      - name: Check out code
+        uses: actions/checkout@v2
+      - name: Make
+        run: |
+          env VERSION=0.0.0-dirty make build # docker is not published, version can be set to fake value
