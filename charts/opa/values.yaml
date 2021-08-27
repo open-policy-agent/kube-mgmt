@@ -110,7 +110,7 @@ hostNetwork:
 
 # Docker image and tag to deploy.
 image: openpolicyagent/opa
-imageTag: 0.15.1
+imageTag: 0.31.0
 imagePullPolicy: IfNotPresent
 
 # One or more secrets to be used when pulling images
@@ -127,7 +127,7 @@ extraArgs: []
 mgmt:
   enabled: true
   image: openpolicyagent/kube-mgmt
-  imageTag: "0.12.1"
+  imageTag: null # appVersion is used by default, set to desired value to override
   imagePullPolicy: IfNotPresent
 # NOTE insecure http port conjointly used for mgmt access and prometheus metrics export
   port: 8181
