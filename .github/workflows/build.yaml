@@ -1,16 +1,36 @@
 name: Build
 
 on:
+  push:
+    paths-ignore:
+      - "docs/**"
+      - "logo/**"
+      - "examples/**"
+      - "**.md"
+    branches: 
+      - "master"
+
   pull_request:
-    branches: [ master ]
+    branches: 
+      - "master"
+
+env:
+  IMAGE: openpolicyagent/kube-mgmt
 
 jobs:
-  build_and_push:
+  build_job:
     name: Build
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
     steps:
-    - name: Check out code
-      uses: actions/checkout@v2
-
-    - name: Make
-      run: make
+      - name: Check out code
+        uses: actions/checkout@v2
+      - name: Build Docker image and Helm chart
+        run: |
+          docker build --build-arg VERSION=${{ env.VERSION }} \
+            --build-arg COMMIT=${{ env.GITHUB_SHA }} \
+            -t ${{ env.IMAGE }}:${{ env.VERSION }} .
+          helm package charts/opa \
+            --version ${{ env.VERSION }}  \
+            --app-version ${{ env.VERSION }}
+        env:
+          VERSION: 0.0.0 # nothing ispublished, version can be set to fake value
