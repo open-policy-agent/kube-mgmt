@@ -154,7 +154,7 @@ spec:
             - --enable-data={{ .Values.mgmt.data.enabled }}
             - --enable-policies={{ .Values.mgmt.configmapPolicies.enabled }}
 {{- if .Values.mgmt.configmapPolicies.enabled }}
-            - --policies={{ .Values.mgmt.configmapPolicies.namespaces | join "," }}
+            - --policies={{ coalesce .Values.mgmt.configmapPolicies.namespaces (list .Release.Namespace) | join "," }}
             - --require-policy-label={{ .Values.mgmt.configmapPolicies.requireLabel }}
 {{- end }}
 {{- range .Values.mgmt.replicate.namespace }}

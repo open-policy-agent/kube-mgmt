@@ -139,7 +139,7 @@ mgmt:
 # NOTE IF you use these, remember to update the RBAC rules below to allow
 #      permissions to get, list, watch, patch and update configmaps
     enabled: false
-    namespaces: [opa, kube-federation-scheduling-policy]
+    namespaces: []
     requireLabel: true
   replicate:
 # NOTE IF you use these, remember to update the RBAC rules below to allow
