@@ -190,19 +190,8 @@ nodeSelector: {}
 resources: {}
 
 rbac:
-  # If true, create & use RBAC resources
-  #
+  # If true, create RBAC resources
   create: true
-  rules:
-    cluster: []
-    # - apiGroups:
-    #     - ""
-    #   resources:
-    #   - namespaces
-    #   verbs:
-    #   - get
-    #   - list
-    #   - watch
 
 serviceAccount:
   # Specifies whether a ServiceAccount should be created
