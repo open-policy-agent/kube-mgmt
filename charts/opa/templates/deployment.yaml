@@ -136,9 +136,19 @@ spec:
               mountPath: /bootstrap
 {{- end }}
           readinessProbe:
-{{ toYaml .Values.readinessProbe | indent 12 }}
+            httpGet:
+              path: /health
+              scheme: HTTPS
+              port: {{ .Values.port }}
+            initialDelaySeconds: 5
+            periodSeconds: 10
           livenessProbe:
-{{ toYaml .Values.livenessProbe | indent 12 }}
+            httpGet:
+              path: /health
+              scheme: HTTPS
+              port: {{ .Values.port }}
+            initialDelaySeconds: 10
+            periodSeconds: 15
 {{- if .Values.mgmt.enabled }}
         - name: mgmt
           image: {{ .Values.mgmt.image }}:{{ .Values.mgmt.imageTag }}
