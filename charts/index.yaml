@@ -41,4 +41,23 @@ entries:
     urls:
     - https://open-policy-agent.github.io/kube-mgmt/charts/opa-1.14.0.tgz
     version: 1.14.0
-generated: "2021-03-29T15:29:36.293785418Z"
+  - apiVersion: v1
+    appVersion: 1.0.0
+    created: "2021-09-17T07:54:38.681516985Z"
+    description: Open source, general-purpose policy engine. Enforce fine-grained
+      invariants over arbitrary Kubernetes resources.
+    digest: 276cd90e01a9a1190067fb85a4c179bc2d8350d94532fe1e3a34a34d2c968b27
+    home: https://www.openpolicyagent.org
+    icon: https://raw.githubusercontent.com/open-policy-agent/opa/master/logo/logo.png
+    keywords:
+    - opa
+    - admission control
+    - policy
+    name: opa
+    sources:
+    - https://github.com/open-policy-agent/opa
+    - https://github.com/open-policy-agent/kube-mgmt
+    urls:
+    - opa-1.0.0.tgz
+    version: 1.0.0
+generated: "2021-09-17T07:54:38.680102246Z"
