@@ -65,10 +65,10 @@ Reference](https://www.openpolicyagent.org/docs/configuration.html).
 | `admissionController.failurePolicy` | Fail-open (`Ignore`) or fail-closed (`Fail`)? | `Ignore` |
 | `admissionController.rules` | Types of operations resources to check. | `*` |
 | `admissionController.namespaceSelector` | Namespace selector for the admission controller | See [values.yaml](values.yaml) |
-| `admissionController.generateCerts` | Auto-generate TLS certificates for admission controller. | `true` |
-| `admissionController.CA` | Manually set admission controller certificate CA. | Unset |
-| `admissionController.cert` | Manually set admission controller certificate. | Unset |
-| `admissionController.key` | Manually set admission controller key. | Unset |
+| `generateCerts` | Auto-generate TLS certificates. | `true` |
+| `CA` | Manually set TLS CA. | Unset |
+| `cert` | Manually set TLS certificate. | Unset |
+| `key` | Manually set TLS key. | Unset |
 | `podDisruptionBudget.enabled` | Enables creation of a PodDisruptionBudget for OPA. | `false` |
 | `podDisruptionBudget.minAvailable` | Sets the minimum number of pods to be available. Cannot be set at the same time as maxUnavailable. | `1` |
 | `podDisruptionBudget.maxUnavailable` | Sets the maximum number of pods to be unavailable. Cannot be set at the same time as minAvailable. | Unset |

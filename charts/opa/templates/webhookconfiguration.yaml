@@ -1,7 +1,7 @@
-{{- if .Values.admissionController.enabled }}
 {{- $cn := printf "%s.%s.svc" ( include "opa.fullname" . ) .Release.Namespace }}
 {{- $ca := genCA "opa-admission-ca" 3650 -}}
 {{- $cert := genSignedCert $cn nil (list $cn) 3650 $ca -}}
+{{- if .Values.admissionController.enabled }}
 kind: {{ .Values.admissionController.kind }}
 apiVersion: admissionregistration.k8s.io/v1beta1
 metadata:
@@ -23,23 +23,23 @@ webhooks:
     rules:
 {{ toYaml .Values.admissionController.rules | indent 6 }}
     clientConfig:
-{{ if not .Values.certManager.enabled }}
-{{ if .Values.admissionController.generateCerts }}
+{{- if not .Values.certManager.enabled }}
+{{- if .Values.generateCerts }}
       caBundle: {{ b64enc $ca.Cert }}
-{{ else }}
-      caBundle: {{ b64enc .Values.admissionController.CA }}
-{{ end }}
-{{ end }}
+{{- else }}
+      caBundle: {{ b64enc .Values.CA }}
+{{- end }}
+{{- end }}
       service:
         name: {{ template "opa.fullname" . }}
         namespace: {{ .Release.Namespace }}
     sideEffects: {{ .Values.admissionController.sideEffect }}
-{{ if .Values.timeoutSeconds }}
+{{- if .Values.timeoutSeconds }}
     timeoutSeconds: {{ .Values.timeoutSeconds }}
-{{ end }}
-
-{{ if .Values.certManager.enabled }}
+{{- end }}
+{{- end }}
 ---
+{{- if .Values.certManager.enabled }}
 # Create a selfsigned Issuer, in order to create a root CA certificate for
 # signing webhook serving certificates
 apiVersion: {{ include "opa.certManagerApiVersion" . }}
@@ -50,7 +50,6 @@ metadata:
 {{ include "opa.labels.standard" . | indent 4 }}
 spec:
   selfSigned: {}
-
 ---
 # Generate a CA Certificate used to sign certificates for the webhook
 apiVersion: {{ include "opa.certManagerApiVersion" . }}
@@ -66,7 +65,6 @@ spec:
     name: {{ include "opa.selfSignedIssuer" . }}
   commonName: "ca.webhook.opa"
   isCA: true
-
 ---
 # Create an Issuer that uses the above generated CA certificate to issue certs
 apiVersion: {{ include "opa.certManagerApiVersion" . }}
@@ -78,9 +76,7 @@ metadata:
 spec:
   ca:
     secretName: {{ include "opa.rootCACertificate" . }}
-
 ---
-
 # Finally, generate a serving certificate for the webhook to use
 apiVersion: {{ include "opa.certManagerApiVersion" . }}
 kind: Certificate
@@ -97,9 +93,7 @@ spec:
   - {{ include "opa.fullname" . }}
   - {{ include "opa.fullname" . }}.{{ .Release.Namespace }}
   - {{ include "opa.fullname" . }}.{{ .Release.Namespace }}.svc
-{{ end }}
-{{- if not .Values.certManager.enabled }}
----
+{{- else }}
 apiVersion: v1
 kind: Secret
 metadata:
@@ -111,13 +105,12 @@ metadata:
     heritage: "{{ .Release.Service }}"
 type: Opaque
 data:
-{{ if .Values.admissionController.generateCerts }}
+{{- if .Values.generateCerts }}
   tls.crt: {{ b64enc $cert.Cert }}
   tls.key: {{ b64enc $cert.Key }}
-{{ else }}
-  tls.crt: {{ b64enc .Values.admissionController.cert }}
-  tls.key: {{ b64enc .Values.admissionController.key }}
-{{ end }}
-{{ end }}
-
+{{- else }}
+  tls.crt: {{ b64enc .Values.cert }}
+  tls.key: {{ b64enc .Values.key }}
 {{- end }}
+{{- end }}
+
