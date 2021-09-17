@@ -2,6 +2,25 @@ apiVersion: v1
 entries:
   opa:
   - apiVersion: v1
+    appVersion: 1.20.0
+    created: "2021-09-17T07:59:37.505496146Z"
+    description: Open source, general-purpose policy engine. Enforce fine-grained
+      invariants over arbitrary Kubernetes resources.
+    digest: 499fdbb679b388aa6b15aca278bb809e8a6d19f494fd898577db45e9e3c16a9c
+    home: https://www.openpolicyagent.org
+    icon: https://raw.githubusercontent.com/open-policy-agent/opa/master/logo/logo.png
+    keywords:
+    - opa
+    - admission control
+    - policy
+    name: opa
+    sources:
+    - https://github.com/open-policy-agent/opa
+    - https://github.com/open-policy-agent/kube-mgmt
+    urls:
+    - opa-1.20.0.tgz
+    version: 1.20.0
+  - apiVersion: v1
     appVersion: 0.15.1
     created: "2021-03-29T15:29:36.296895942Z"
     description: Open source, general-purpose policy engine. Enforce fine-grained
@@ -60,4 +79,4 @@ entries:
     urls:
     - opa-1.0.0.tgz
     version: 1.0.0
-generated: "2021-09-17T07:54:38.680102246Z"
+generated: "2021-09-17T07:59:37.503958322Z"
