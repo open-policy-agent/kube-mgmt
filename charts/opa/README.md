@@ -24,7 +24,10 @@ configuration.
 ```bash
 helm repo add opa https://open-policy-agent.github.io/kube-mgmt/charts
 helm repo update
+# Helm 2
 helm upgrade -i -n opa --create-namespace opa/opa
+# Helm 3
+helm upgrade opa opa/opa -i -n opa --create-namespace
 ```
 
 Once installed, the OPA will download a sample bundle from
