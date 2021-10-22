@@ -93,3 +93,14 @@ certmanager.k8s.io/v1alpha1
 {{- fail "cert-manager CRD does not appear to be installed" }}
 {{- end -}}
 {{- end -}}
+
+{{/*
+Detect the available version of admissionregistration
+*/}}
+{{- define "opa.AdmissionregistrationApiVersion" -}}
+{{- if (.Capabilities.APIVersions.Has "admissionregistration.k8s.io/v1") -}}
+admissionregistration.k8s.io/v1
+{{- else  -}}
+admissionregistration.k8s.io/v1beta1
+{{- end -}}
+{{- end -}}

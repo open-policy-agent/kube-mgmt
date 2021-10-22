@@ -3,7 +3,7 @@
 {{- $cert := genSignedCert $cn nil (list $cn) 3650 $ca -}}
 {{- if .Values.admissionController.enabled }}
 kind: {{ .Values.admissionController.kind }}
-apiVersion: admissionregistration.k8s.io/v1beta1
+apiVersion: {{ include "opa.AdmissionregistrationApiVersion" . }}
 metadata:
   name: {{ template "opa.fullname" . }}
   annotations:
@@ -15,6 +15,7 @@ metadata:
 {{ include "opa.labels.standard" . | indent 4 }}
 webhooks:
   - name: webhook.openpolicyagent.org
+    admissionReviewVersions: ["v1beta1"]
 {{- with .Values.admissionController.namespaceSelector }}
     namespaceSelector:
 {{ toYaml . | indent 6 }}
