@@ -64,8 +64,9 @@ admissionController:
     matchExpressions:
       - {key: openpolicyagent.org/webhook, operator: NotIn, values: [ignore]}
 
-  # SideEffectClass for the webhook, setting to None enables dry-run
-  sideEffect: Unknown
+  # SideEffectClass for the webhook, setting to NoneOnDryRun enables dry-run.
+  # Only None and NoneOnDryRun are permitted for admissionregistration.k8s.io/v1.
+  sideEffect: None
 
   # To restrict the kinds of operations and resources that are subject to OPA
   # policy checks, see the settings below. By default, all resources and

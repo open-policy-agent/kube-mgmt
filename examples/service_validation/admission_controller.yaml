@@ -66,11 +66,12 @@ spec:
             secretName: opa-server
 ---
 kind: ValidatingWebhookConfiguration
-apiVersion: admissionregistration.k8s.io/v1beta1
+apiVersion: admissionregistration.k8s.io/v1
 metadata:
   name: opa-validating-webhook
 webhooks:
   - name: validating-webhook.openpolicyagent.org
+    admissionReviewVersions: ["v1beta1"]
     rules:
       - operations: ["CREATE"]
         apiGroups: ["*"]
@@ -81,6 +82,7 @@ webhooks:
       service:
         namespace: opa
         name: opa
+    sideEffects: None
 ---
 kind: ConfigMap
 apiVersion: v1
