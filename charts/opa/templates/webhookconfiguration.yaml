@@ -3,7 +3,7 @@
 {{- $cert := genSignedCert $cn nil (list $cn) 3650 $ca -}}
 {{- if .Values.admissionController.enabled }}
 kind: {{ .Values.admissionController.kind }}
-apiVersion: {{ include "opa.AdmissionregistrationApiVersion" . }}
+apiVersion: {{ include "opa.admissionregistrationApiVersion" . }}
 metadata:
   name: {{ template "opa.fullname" . }}
   annotations:
