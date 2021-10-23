@@ -97,7 +97,7 @@ certmanager.k8s.io/v1alpha1
 {{/*
 Detect the available version of admissionregistration
 */}}
-{{- define "opa.AdmissionregistrationApiVersion" -}}
+{{- define "opa.admissionregistrationApiVersion" -}}
 {{- if (.Capabilities.APIVersions.Has "admissionregistration.k8s.io/v1") -}}
 admissionregistration.k8s.io/v1
 {{- else  -}}
