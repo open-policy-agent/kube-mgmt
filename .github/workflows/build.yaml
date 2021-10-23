@@ -29,6 +29,7 @@ jobs:
           docker build --build-arg VERSION=${{ env.VERSION }} \
             --build-arg COMMIT=${{ env.GITHUB_SHA }} \
             -t ${{ env.IMAGE }}:${{ env.VERSION }} .
+          helm lint charts/opa
           helm package charts/opa \
             --version ${{ env.VERSION }}  \
             --app-version ${{ env.VERSION }}
