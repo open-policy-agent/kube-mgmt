@@ -33,7 +33,7 @@ cat > ingress-bad.yaml <<EOF
 apiVersion: extensions/v1beta1
 kind: Ingress
 metadata:
-  name: ingress-ok
+  name: ingress-bad
 spec:
   rules:
   - host: signin.acmecorp.com
