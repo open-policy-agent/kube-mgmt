@@ -125,6 +125,9 @@ port: 443
 
 extraArgs: []
 
+# Extra environment variables to be loaded into the OPA container
+extraEnv: []
+
 mgmt:
   enabled: false
   image: openpolicyagent/kube-mgmt
@@ -133,6 +136,7 @@ mgmt:
 # NOTE insecure http port conjointly used for mgmt access and prometheus metrics export
   port: 8181
   extraArgs: []
+  extraEnv: []
   resources: {}
   data:
     enabled: false
