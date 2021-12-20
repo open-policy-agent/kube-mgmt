@@ -60,6 +60,8 @@ Reference](https://www.openpolicyagent.org/docs/configuration.html).
 | Parameter | Description | Default |
 | --- | --- | --- |
 | `certManager.enabled` | Setup the Webhook using cert-manager | `false` |
+| `certManager.rootCACertificateDuration` | Duration of the Webhook's root CA | `43800h` (5y) |
+| `certManager.servingCertificateDuration` | Duration of the Webhook's serving certificate | `8760h` (1y) |
 | `admissionController.enabled` | | `true` |
 | `admissionController.kind` | Type of admission controller to install. | `ValidatingWebhookConfiguration` |
 | `admissionController.failurePolicy` | Fail-open (`Ignore`) or fail-closed (`Fail`)? | `Ignore` |
