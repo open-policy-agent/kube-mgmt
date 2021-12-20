@@ -61,7 +61,7 @@ metadata:
 {{ include "opa.labels.standard" . | indent 4 }}
 spec:
   secretName: {{ include "opa.rootCACertificate" . }}
-  duration: 43800h # 5y
+  duration: {{ .Values.certManager.rootCACertificateDuration | quote }}
   issuerRef:
     name: {{ include "opa.selfSignedIssuer" . }}
   commonName: "ca.webhook.opa"
@@ -87,7 +87,7 @@ metadata:
 {{ include "opa.labels.standard" . | indent 4 }}
 spec:
   secretName: {{ template "opa.fullname" . }}-cert
-  duration: 8760h # 1y
+  duration: {{ .Values.certManager.servingCertificateDuration | quote }}
   issuerRef:
     name: {{ include "opa.rootCAIssuer" . }}
   dnsNames:

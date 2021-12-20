@@ -17,6 +17,8 @@ opa:
 # Setup the webhook using cert-manager
 certManager:
   enabled: false
+  rootCACertificateDuration: 43800h # 5y
+  servingCertificateDuration: 8760h # 1y
 
 # Expose the prometheus scraping endpoint
 prometheus:
