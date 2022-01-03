@@ -11,6 +11,9 @@ metadata:
     certmanager.k8s.io/inject-ca-from: {{ printf "%s/%s" .Release.Namespace (include "opa.rootCACertificate" .) | quote }}
     cert-manager.io/inject-ca-from: {{ printf "%s/%s" .Release.Namespace (include "opa.rootCACertificate" .) | quote }}
 {{- end }}
+{{- if .Values.admissionController.annotations }}
+{{ toYaml .Values.admissionController.annotations | indent 4 }}
+{{- end }}
   labels:
 {{ include "opa.labels.standard" . | indent 4 }}
 webhooks:
@@ -46,6 +49,10 @@ webhooks:
 apiVersion: {{ include "opa.certManagerApiVersion" . }}
 kind: Issuer
 metadata:
+{{- if .Values.admissionController.annotations }}
+  annotations:
+{{ toYaml .Values.admissionController.annotations | indent 4 }}
+{{- end }}
   name: {{ include "opa.selfSignedIssuer" . }}
   labels:
 {{ include "opa.labels.standard" . | indent 4 }}
@@ -56,6 +63,10 @@ spec:
 apiVersion: {{ include "opa.certManagerApiVersion" . }}
 kind: Certificate
 metadata:
+{{- if .Values.admissionController.annotations }}
+  annotations:
+{{ toYaml .Values.admissionController.annotations | indent 4 }}
+{{- end }}
   name: {{ include "opa.rootCACertificate" . }}
   labels:
 {{ include "opa.labels.standard" . | indent 4 }}
@@ -71,6 +82,10 @@ spec:
 apiVersion: {{ include "opa.certManagerApiVersion" . }}
 kind: Issuer
 metadata:
+{{- if .Values.admissionController.annotations }}
+  annotations:
+{{ toYaml .Values.admissionController.annotations | indent 4 }}
+{{- end }}
   name: {{ include "opa.rootCAIssuer" . }}
   labels:
 {{ include "opa.labels.standard" . | indent 4 }}
@@ -82,6 +97,10 @@ spec:
 apiVersion: {{ include "opa.certManagerApiVersion" . }}
 kind: Certificate
 metadata:
+{{- if .Values.admissionController.annotations }}
+  annotations:
+{{ toYaml .Values.admissionController.annotations | indent 4 }}
+{{- end }}
   name: {{ include "opa.servingCertificate" . }}
   labels:
 {{ include "opa.labels.standard" . | indent 4 }}
@@ -98,6 +117,10 @@ spec:
 apiVersion: v1
 kind: Secret
 metadata:
+{{- if .Values.admissionController.annotations }}
+  annotations:
+{{ toYaml .Values.admissionController.annotations | indent 4 }}
+{{- end }}
   name: {{ template "opa.fullname" . }}-cert
   labels:
     app: {{ template "opa.fullname" . }}

@@ -64,6 +64,7 @@ Reference](https://www.openpolicyagent.org/docs/configuration.html).
 | `certManager.servingCertificateDuration` | Duration of the Webhook's serving certificate | `8760h` (1y) |
 | `admissionController.enabled` | | `true` |
 | `admissionController.kind` | Type of admission controller to install. | `ValidatingWebhookConfiguration` |
+| `admissionController.annotations` | Annotations placed on all admissionController resources (Secret/Certificate/Issuer/AdmissionController). | `[]` |
 | `admissionController.failurePolicy` | Fail-open (`Ignore`) or fail-closed (`Fail`)? | `Ignore` |
 | `admissionController.rules` | Types of operations resources to check. | `*` |
 | `admissionController.namespaceSelector` | Namespace selector for the admission controller | See [values.yaml](values.yaml) |

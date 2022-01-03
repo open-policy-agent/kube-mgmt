@@ -57,6 +57,10 @@ admissionController:
   # To enforce mutating policies, change to MutatingWebhookConfiguration.
   kind: ValidatingWebhookConfiguration
 
+  # To set annotations on all admissionController resources (Secret/Certificate/Issuer/AdmissionController)
+  # annotations:
+  #   example: value
+
   # To _fail closed_ on failures, change to Fail. During initial testing, we
   # recommend leaving the failure policy as Ignore.
   failurePolicy: Ignore
