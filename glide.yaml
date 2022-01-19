@@ -1,8 +1,0 @@
-package: github.com/open-policy-agent/kube-mgmt
-import:
-- package: github.com/Sirupsen/logrus
-  version: v0.11.4
-- package: k8s.io/client-go
-  version: v11.0.0
-- package: github.com/spf13/cobra
-- package: github.com/pkg/errors
