@@ -1,0 +1,22 @@
+apiVersion: k3d.io/v1alpha3
+kind: Simple
+name: kube-mgmt
+servers: 1
+agents: 0
+registries:
+  create:
+    name: kube-mgmt-registry
+    host: "0.0.0.0"
+    hostPort: "5000"
+  config: |
+    mirrors:
+      "localhost:5000":
+        endpoint:
+          - http://kube-mgmt-registry:5000
+options:
+  k3d:
+    disableLoadbalancer: true
+  k3s:
+    extraArgs:
+      - arg: "--disable=servicelb,traefik,local-storage,metrics-server"
+        nodeFilters: ["all"]

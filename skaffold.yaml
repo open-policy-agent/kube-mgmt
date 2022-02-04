@@ -1,0 +1,31 @@
+apiVersion: skaffold/v2beta19
+kind: Config
+metadata:
+  name: kube-mgmt
+build:
+  artifacts:
+    - image: openpolicyagent/kube-mgmt
+      context: .
+      docker:
+        buildArgs:
+          VERSION: "{{.VERSION}}"
+          COMMIT: "{{.COMMIT}}"
+  local:
+    push: true
+    useBuildkit: true
+profiles:
+  - name: local
+    activation:
+      - kubeContext: k3d-kube-mgmt
+    deploy:
+      helm:
+        releases:
+          - name: kube-mgmt
+            chartPath: charts/opa
+            wait: true
+            upgradeOnChange: false
+            skipBuildDependencies: true
+            artifactOverrides:
+              image: openpolicyagent/kube-mgmt
+            imageStrategy:
+              helm: {}
