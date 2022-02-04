@@ -232,16 +232,13 @@ allow {
 
 ## Development Guide
 
-1. To run all of the tests and build the Docker image run 
+This project uses excellent tool [Just](https://github.com/casey/just#just) for buiding.
+It is configured by [justfile](./justfile) file in root directory.
+All available targets can be inspected by running `just` in command line.
 
-    ```sh 
-    docker build -t opa/opa .
-    ```
+## Release procedure
 
-1. To create a new release - create and push _annotated tag_ that represent semantic version (without any prefixes)
+To release a new version - just create [GitHub release](https://github.com/open-policy-agent/kube-mgmt/releases)
+with corresponding tag, following semantic version converntion.
 
-    ```sh
-    export REL=1.1.1
-    git tag -am "chore: release $REL" $REL
-    git push origin $REL
-    ```
+As soon as tag will be pushed - CI pipeline will build and publish all artifacts.

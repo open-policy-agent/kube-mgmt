@@ -12,6 +12,7 @@ default:
     skaffold build -t {{VERSION}} --file-output=skaffold.json
     helm package charts/opa --version {{VERSION}} --app-version {{VERSION}}
 
+# same as build but also pushes `latest` tag
 build-latest: build
     #!/usr/bin/env bash
     set -euxo pipefail
@@ -29,7 +30,7 @@ build-latest: build
 # run all tests
 test: test-helm test-e2e
 
-# recreate local k8s cluster with k3d
+# (re) create local k8s cluster using k3d
 @k3d: && skaffold-ctx
     k3d cluster delete kube-mgmt || true
     k3d cluster create --config ./test/e2e/k3d.yaml
@@ -38,9 +39,11 @@ test: test-helm test-e2e
 @template:
     skaffold render -a skaffold.json
 
+# deploy chart to local k8s
 @up: skaffold-ctx
     skaffold run
- 
+
+# delete chart from local k8s
 @down:
     skaffold delete || true
 
