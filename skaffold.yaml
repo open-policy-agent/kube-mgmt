@@ -1,7 +1,7 @@
 apiVersion: skaffold/v2beta19
 kind: Config
 metadata:
-  name: kube-mgmt
+  name: opa
 build:
   artifacts:
     - image: openpolicyagent/kube-mgmt
@@ -20,12 +20,12 @@ profiles:
     deploy:
       helm:
         releases:
-          - name: kube-mgmt
+          - name: opa
             chartPath: charts/opa
             wait: true
             upgradeOnChange: false
             skipBuildDependencies: true
             artifactOverrides:
-              image: openpolicyagent/kube-mgmt
+              mgmt.image: openpolicyagent/kube-mgmt
             imageStrategy:
               helm: {}

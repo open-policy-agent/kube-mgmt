@@ -43,8 +43,8 @@ spec:
 {{- if or .Values.authz.enabled .Values.bootstrapPolicies}}
       initContainers:
         - name: initpolicy
-          image: {{ .Values.mgmt.image }}:{{ coalesce .Values.mgmt.imageTag .Chart.AppVersion }}
-          imagePullPolicy: {{ .Values.mgmt.imagePullPolicy }}
+          image: {{ include "opa.mgmt.image" . }}
+          imagePullPolicy: {{ .Values.mgmt.image.pullPolicy }}
           resources:
 {{ toYaml .Values.mgmt.resources | indent 12 }}
           command:
@@ -90,8 +90,8 @@ spec:
           - name: http
             containerPort: {{ .Values.mgmt.port }}
 {{- end }}
-          image: {{ .Values.image }}:{{ .Values.imageTag }}
-          imagePullPolicy: {{ .Values.imagePullPolicy }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
           env:
 {{- if .Values.extraEnv }}        
 {{ toYaml .Values.extraEnv | indent 12 }}
@@ -155,8 +155,8 @@ spec:
             periodSeconds: 15
 {{- if .Values.mgmt.enabled }}
         - name: mgmt
-          image: {{ .Values.mgmt.image }}:{{ coalesce .Values.mgmt.imageTag .Chart.AppVersion }}
-          imagePullPolicy: {{ .Values.mgmt.imagePullPolicy }}
+          image: {{ include "opa.mgmt.image" . }}
+          imagePullPolicy: {{ .Values.mgmt.image.pullPolicy }}
           env:
 {{- if .Values.mgmt.extraEnv }}        
 {{ toYaml .Values.mgmt.extraEnv | indent 12 }}
@@ -193,8 +193,8 @@ spec:
 {{- end }}
 {{- if .Values.sar.enabled }}
         - name: sarproxy
-          image: {{ .Values.sar.image }}:{{ .Values.sar.imageTag }}
-          imagePullPolicy: {{ .Values.sar.imagePullPolicy }}
+          image: {{ .Values.sar.image.repository }}:{{ .Values.sar.image.tag }}
+          imagePullPolicy: {{ .Values.sar.image.pullPolicy }}
           resources:
 {{ toYaml .Values.sar.resources | indent 12 }}
           command:

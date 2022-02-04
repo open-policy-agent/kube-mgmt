@@ -30,4 +30,4 @@ jobs:
           skipClusterCreation: true
       - run: |
           just k3d
-          just build
+          just up
