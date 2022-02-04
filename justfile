@@ -34,8 +34,13 @@ test: test-helm test-e2e
     k3d cluster delete kube-mgmt || true
     k3d cluster create --config ./test/e2e/k3d.yaml
 
-# @up: skaffold-ctx build
-#     skaffold run
-# 
-# @down:
-#     skaffold delete || true
+# render k8s manifests
+@template:
+    skaffold render -a skaffold.json
+
+@up: skaffold-ctx
+    skaffold run
+ 
+@down:
+    skaffold delete || true
+

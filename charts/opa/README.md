@@ -76,8 +76,8 @@ Reference](https://www.openpolicyagent.org/docs/configuration.html).
 | `podDisruptionBudget.minAvailable` | Sets the minimum number of pods to be available. Cannot be set at the same time as maxUnavailable. | `1` |
 | `podDisruptionBudget.maxUnavailable` | Sets the maximum number of pods to be unavailable. Cannot be set at the same time as minAvailable. | Unset |
 | `hostNetwork.enabled` | Use hostNetwork setting on OPA pod | `false` |
-| `image` | OPA image to deploy. | `openpolicyagent/opa` |
-| `imageTag` | OPA image tag to deploy. | See [values.yaml](values.yaml) |
+| `image.repository` | OPA image to deploy. | `openpolicyagent/opa` |
+| `image.tag` | OPA image tag to deploy. | See [values.yaml](values.yaml) |
 | `port` | Port in the pod to which OPA will bind itself. | `443` |
 | `logLevel` | Log level that OPA outputs at, (`debug`, `info` or `error`) | `info` |
 | `logFormat` | Log format that OPA produces (`text` or `json`) | `text` |

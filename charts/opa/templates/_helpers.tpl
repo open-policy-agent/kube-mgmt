@@ -102,3 +102,8 @@ admissionregistration.k8s.io/v1
 admissionregistration.k8s.io/v1beta1
 {{- end -}}
 {{- end -}}
+
+{{- define "opa.mgmt.image" -}}
+{{- $tag := .Values.mgmt.image.tag | default .Chart.AppVersion -}}
+{{ printf "%s:%s" .Values.mgmt.image.repository $tag }}
+{{- end -}}

@@ -116,9 +116,10 @@ hostNetwork:
   enabled: false
 
 # Docker image and tag to deploy.
-image: openpolicyagent/opa
-imageTag: 0.37.0
-imagePullPolicy: IfNotPresent
+image: 
+  repository: openpolicyagent/opa
+  tag: 0.37.0
+  pullPolicy: IfNotPresent
 
 # One or more secrets to be used when pulling images
 imagePullSecrets: []
@@ -136,9 +137,10 @@ extraEnv: []
 
 mgmt:
   enabled: false
-  image: openpolicyagent/kube-mgmt
-  imageTag: null # appVersion is used by default, set to desired value to override
-  imagePullPolicy: IfNotPresent
+  image: 
+    repository: openpolicyagent/kube-mgmt
+    tag: null # appVersion is used by default, set to desired value to override
+    pullPolicy: IfNotPresent      
 # NOTE insecure http port conjointly used for mgmt access and prometheus metrics export
   port: 8181
   extraArgs: []
@@ -215,9 +217,10 @@ serviceAccount:
 # Kubernetes API. You can get a rego function at github.com/open-policy-agent/library
 sar:
   enabled: false
-  image: lachlanevenson/k8s-kubectl
-  imageTag: latest
-  imagePullPolicy: IfNotPresent
+  image: 
+    repository: lachlanevenson/k8s-kubectl
+    tag: latest
+    pullPolicy: IfNotPresent
   resources: {}
 
 # Set a priorityClass using priorityClassName
