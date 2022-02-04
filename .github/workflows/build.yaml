@@ -14,24 +14,20 @@ on:
     branches: 
       - "master"
 
-env:
-  IMAGE: openpolicyagent/kube-mgmt
-
 jobs:
   build_job:
     name: Build
     runs-on: ubuntu-latest
     steps:
-      - name: Check out code
-        uses: actions/checkout@v2
-      - name: Build Docker image and Helm chart
-        run: |
-          docker build --build-arg VERSION=${{ env.VERSION }} \
-            --build-arg COMMIT=${{ env.GITHUB_SHA }} \
-            -t ${{ env.IMAGE }}:${{ env.VERSION }} .
-          helm lint charts/opa
-          helm package charts/opa \
-            --version ${{ env.VERSION }}  \
-            --app-version ${{ env.VERSION }}
-        env:
-          VERSION: 0.0.0 # nothing ispublished, version can be set to fake value
+      - uses: actions/checkout@v2
+      - uses: volesen/setup-skaffold@v1.1
+        with:
+          version: 'v1.33.0'
+      - uses: extractions/setup-just@v1
+      - run: just test
+      - uses: rinx/setup-k3d@v0.0.4
+        with:
+          skipClusterCreation: true
+      - run: |
+          just k3d
+          just build
