@@ -30,4 +30,6 @@ jobs:
           skipClusterCreation: true
       - run: |
           just k3d
-          just up
+          just _up-e2e
+      - run: |
+          kubectl get all -A

@@ -29,3 +29,18 @@ profiles:
               mgmt.image: openpolicyagent/kube-mgmt
             imageStrategy:
               helm: {}
+  - name: e2e
+    deploy:
+      helm:
+        releases:
+          - name: opa
+            chartPath: charts/opa
+            wait: true
+            upgradeOnChange: false
+            skipBuildDependencies: true
+            valuesFiles:
+              - test/e2e/values-e2e.yaml
+            artifactOverrides:
+              mgmt.image: openpolicyagent/kube-mgmt
+            imageStrategy:
+              helm: {}
