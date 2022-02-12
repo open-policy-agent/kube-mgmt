@@ -25,7 +25,7 @@ jobs:
           password: ${{ secrets.DOCKER_PASSWORD }}
       - name: Build docker image
         run: |
-          just VERSION=${{ steps.theVersion.outputs.theVersion }} build-latest
+          just VERSION=${{ steps.theVersion.outputs.theVersion }} _build-latest
       - name: Upload Helm artifact
         uses: actions/upload-artifact@v2
         with:
