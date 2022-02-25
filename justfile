@@ -20,6 +20,9 @@ _build-latest: build
     docker tag $CURRENT $LATEST
     docker push $LATEST
 
+@test-go:
+    ./test/go/test.sh
+
 @test-helm:
     ./test/linter/test.sh
 
@@ -27,7 +30,7 @@ _build-latest: build
     ./test/e2e/test.sh
 
 # run all tests
-test: test-helm test-e2e
+test: test-go test-helm test-e2e
 
 # (re) create local k8s cluster using k3d
 @k3d: && _skaffold-ctx
