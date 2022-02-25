@@ -1,4 +1,4 @@
-FROM golang:1.17.6-alpine as build
+FROM golang:1.17.7-alpine as build
 
 ARG ARCH=amd64
 ARG PKG=github.com/open-policy-agent/kube-mgmt
