@@ -5,11 +5,12 @@
 package data
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"time"
 
-	"github.com/Sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"k8s.io/apimachinery/pkg/runtime"
@@ -17,7 +18,6 @@ import (
 
 	opa_client "github.com/open-policy-agent/kube-mgmt/pkg/opa"
 	"github.com/open-policy-agent/kube-mgmt/pkg/types"
-	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/watch"
@@ -30,7 +30,6 @@ type GenericSync struct {
 	kubeconfig *rest.Config
 	opa        opa_client.Data
 	ns         types.ResourceType
-	internal   chan struct{}
 }
 
 // The min/max amount of time to wait when resetting the synchronizer.
@@ -117,11 +116,19 @@ func (s *GenericSync) loop(client dynamic.Interface, quit chan struct{}) {
 	}
 }
 
-type errKubernetes error
+type errKubernetes struct{ error }
 
-type errOPA error
+type errOPA struct{ error }
 
 type errChannelClosed struct{}
+
+func (err errKubernetes) Unwrap() error {
+	return err.error
+}
+
+func (err errOPA) Unwrap() error {
+	return err.error
+}
 
 func (errChannelClosed) Error() string {
 	return "channel closed"
@@ -135,9 +142,9 @@ func (s *GenericSync) sync(resource dynamic.NamespaceableResourceInterface, quit
 
 	logrus.Infof("Syncing %v.", s.ns)
 	tList := time.Now()
-	result, err := resource.List(metav1.ListOptions{})
+	result, err := resource.List(context.TODO(), metav1.ListOptions{})
 	if err != nil {
-		return errKubernetes(errors.Wrap(err, "list"))
+		return errKubernetes{fmt.Errorf("list: %w", err)}
 	}
 
 	dList := time.Since(tList)
@@ -147,17 +154,17 @@ func (s *GenericSync) sync(resource dynamic.NamespaceableResourceInterface, quit
 	tLoad := time.Now()
 
 	if err := s.syncAll(result.Items); err != nil {
-		return errOPA(errors.Wrap(err, "reset"))
+		return errOPA{fmt.Errorf("reset: %w", err)}
 	}
 
 	dLoad := time.Since(tLoad)
 	logrus.Infof("Loaded %v resources into OPA. Took %v. Starting watch at resourceVersion %v.", s.ns, dLoad, resourceVersion)
 
-	w, err := resource.Watch(metav1.ListOptions{
+	w, err := resource.Watch(context.TODO(), metav1.ListOptions{
 		ResourceVersion: resourceVersion,
 	})
 	if err != nil {
-		return errKubernetes(errors.Wrap(err, "watch"))
+		return errKubernetes{fmt.Errorf("watch: %w", err)}
 	}
 
 	defer w.Stop()
@@ -171,20 +178,20 @@ func (s *GenericSync) sync(resource dynamic.NamespaceableResourceInterface, quit
 			case watch.Added:
 				err := s.syncAdd(evt.Object)
 				if err != nil {
-					return errOPA(errors.Wrap(err, "add event"))
+					return errOPA{fmt.Errorf("add event: %w", err)}
 				}
 			case watch.Modified:
 				err := s.syncAdd(evt.Object)
 				if err != nil {
-					return errOPA(errors.Wrap(err, "modify event"))
+					return errOPA{fmt.Errorf("modify event: %w", err)}
 				}
 			case watch.Deleted:
 				err := s.syncRemove(evt.Object)
 				if err != nil {
-					return errOPA(errors.Wrap(err, "delete event"))
+					return errOPA{fmt.Errorf("delete event: %w", err)}
 				}
 			case watch.Error:
-				return errKubernetes(fmt.Errorf("error event: %v", evt.Object))
+				return errKubernetes{fmt.Errorf("error event: %v", evt.Object)}
 			default:
 				return errChannelClosed{}
 			}
@@ -236,7 +243,7 @@ func (s *GenericSync) generateSyncPayload(objs []unstructured.Unstructured) (map
 		// sync'd with the GenericSync instance.
 		segments := strings.Split(objPath, "/")
 		dir := combined
-		for i := 0; i < len(segments) -1; i++ {
+		for i := 0; i < len(segments)-1; i++ {
 			next, ok := combined[segments[i]]
 			if !ok {
 				next = map[string]interface{}{}
@@ -244,7 +251,7 @@ func (s *GenericSync) generateSyncPayload(objs []unstructured.Unstructured) (map
 			}
 			dir = next.(map[string]interface{})
 		}
-		dir[segments[len(segments) -1]] = obj.Object
+		dir[segments[len(segments)-1]] = obj.Object
 	}
 
 	return combined, nil

@@ -28,7 +28,7 @@ func (err *Error) Error() string {
 type Undefined struct{}
 
 func (Undefined) Error() string {
-	return fmt.Sprintf("undefined")
+	return "undefined"
 }
 
 // IsUndefinedErr returns true if the err represents an undefined result from

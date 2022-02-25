@@ -21,12 +21,12 @@ func TestGeneratePatchesSingleClusterResource(t *testing.T) {
 	prefix := ""
 	objs := []unstructured.Unstructured{
 		{
-			mustJSONRoundTripObj(t, apiv1.Node{
+			Object: mustJSONRoundTripObj(t, apiv1.Node{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "node1",
 				},
-				Spec:       apiv1.NodeSpec{},
-				Status:     apiv1.NodeStatus{},
+				Spec:   apiv1.NodeSpec{},
+				Status: apiv1.NodeStatus{},
 			}),
 		},
 	}
@@ -74,12 +74,12 @@ func TestGeneratePatchesSingleClusterResourceWithPrefix(t *testing.T) {
 	prefix := "kube"
 	objs := []unstructured.Unstructured{
 		{
-			mustJSONRoundTripObj(t, apiv1.Node{
+			Object: mustJSONRoundTripObj(t, apiv1.Node{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "node1",
 				},
-				Spec:       apiv1.NodeSpec{},
-				Status:     apiv1.NodeStatus{},
+				Spec:   apiv1.NodeSpec{},
+				Status: apiv1.NodeStatus{},
 			}),
 		},
 	}
@@ -127,30 +127,30 @@ func TestGeneratePatchesMultipleClusterResourceWithPrefix(t *testing.T) {
 	prefix := "kube"
 	objs := []unstructured.Unstructured{
 		{
-			mustJSONRoundTripObj(t, apiv1.Node{
+			Object: mustJSONRoundTripObj(t, apiv1.Node{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "node1",
 				},
-				Spec:       apiv1.NodeSpec{},
-				Status:     apiv1.NodeStatus{},
+				Spec:   apiv1.NodeSpec{},
+				Status: apiv1.NodeStatus{},
 			}),
 		},
 		{
-			mustJSONRoundTripObj(t, apiv1.Node{
+			Object: mustJSONRoundTripObj(t, apiv1.Node{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "node2",
 				},
-				Spec:       apiv1.NodeSpec{},
-				Status:     apiv1.NodeStatus{},
+				Spec:   apiv1.NodeSpec{},
+				Status: apiv1.NodeStatus{},
 			}),
 		},
 		{
-			mustJSONRoundTripObj(t, apiv1.Node{
+			Object: mustJSONRoundTripObj(t, apiv1.Node{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "node3",
 				},
-				Spec:       apiv1.NodeSpec{},
-				Status:     apiv1.NodeStatus{},
+				Spec:   apiv1.NodeSpec{},
+				Status: apiv1.NodeStatus{},
 			}),
 		},
 	}
@@ -254,13 +254,13 @@ func TestGeneratePatchesSingleNamespacedResource(t *testing.T) {
 	prefix := ""
 	objs := []unstructured.Unstructured{
 		{
-			mustJSONRoundTripObj(t, apiv1.Pod{
+			Object: mustJSONRoundTripObj(t, apiv1.Pod{
 				ObjectMeta: metav1.ObjectMeta{
-					Name: "pod1",
+					Name:      "pod1",
 					Namespace: "ns1",
 				},
-				Spec:       apiv1.PodSpec{},
-				Status:     apiv1.PodStatus{},
+				Spec:   apiv1.PodSpec{},
+				Status: apiv1.PodStatus{},
 			}),
 		},
 	}
@@ -295,13 +295,13 @@ func TestGeneratePatchesSingleNamespacedResourceWithPrefix(t *testing.T) {
 	prefix := "kube"
 	objs := []unstructured.Unstructured{
 		{
-			mustJSONRoundTripObj(t, apiv1.Pod{
+			Object: mustJSONRoundTripObj(t, apiv1.Pod{
 				ObjectMeta: metav1.ObjectMeta{
-					Name: "pod1",
+					Name:      "pod1",
 					Namespace: "ns1",
 				},
-				Spec:       apiv1.PodSpec{},
-				Status:     apiv1.PodStatus{},
+				Spec:   apiv1.PodSpec{},
+				Status: apiv1.PodStatus{},
 			}),
 		},
 	}
@@ -336,33 +336,33 @@ func TestGeneratePatchesMultipleNamespacedResourceWithPrefix(t *testing.T) {
 	prefix := "kube"
 	objs := []unstructured.Unstructured{
 		{
-			mustJSONRoundTripObj(t, apiv1.Pod{
+			Object: mustJSONRoundTripObj(t, apiv1.Pod{
 				ObjectMeta: metav1.ObjectMeta{
-					Name: "pod1",
+					Name:      "pod1",
 					Namespace: "ns1",
 				},
-				Spec:       apiv1.PodSpec{},
-				Status:     apiv1.PodStatus{},
+				Spec:   apiv1.PodSpec{},
+				Status: apiv1.PodStatus{},
 			}),
 		},
 		{
-			mustJSONRoundTripObj(t, apiv1.Pod{
+			Object: mustJSONRoundTripObj(t, apiv1.Pod{
 				ObjectMeta: metav1.ObjectMeta{
-					Name: "pod2",
+					Name:      "pod2",
 					Namespace: "ns1",
 				},
-				Spec:       apiv1.PodSpec{},
-				Status:     apiv1.PodStatus{},
+				Spec:   apiv1.PodSpec{},
+				Status: apiv1.PodStatus{},
 			}),
 		},
 		{
-			mustJSONRoundTripObj(t, apiv1.Pod{
+			Object: mustJSONRoundTripObj(t, apiv1.Pod{
 				ObjectMeta: metav1.ObjectMeta{
-					Name: "pod1",
+					Name:      "pod1",
 					Namespace: "ns2",
 				},
-				Spec:       apiv1.PodSpec{},
-				Status:     apiv1.PodStatus{},
+				Spec:   apiv1.PodSpec{},
+				Status: apiv1.PodStatus{},
 			}),
 		},
 	}
@@ -430,7 +430,6 @@ func verifyGenerateSyncPayload(t *testing.T, resourceType types.ResourceType, pr
 	}
 }
 
-
 func mustMarshalJSON(t *testing.T, obj interface{}) []byte {
 	t.Helper()
 	bs, err := json.Marshal(obj)
@@ -465,6 +464,6 @@ func mustJSONRoundTripObj(t *testing.T, obj interface{}) map[string]interface{} 
 
 	out := map[string]interface{}{}
 	mustUnmarshalJSON(t, bs, &out)
-	
+
 	return out
 }

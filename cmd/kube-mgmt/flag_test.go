@@ -75,14 +75,14 @@ func TestPolicyFlags(t *testing.T) {
 			flag:           "-foo",
 			value:          "rego",
 			expectFullFlag: "",
-			err:            errors.New(`invalid label key "-foo": name part must consist of alphanumeric characters, '-', '_' or '.', and must start and end with an alphanumeric character (e.g. 'MyName',  or 'my.name',  or '123-abc', regex used for validation is '([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9]')`),
+			err:            errors.New(`key: Invalid value: "-foo": name part must consist of alphanumeric characters, '-', '_' or '.', and must start and end with an alphanumeric character (e.g. 'MyName',  or 'my.name',  or '123-abc', regex used for validation is '([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9]')`),
 		},
 		{
 			name:           "invalidValue",
 			flag:           "foo",
 			value:          "-rego",
 			expectFullFlag: "",
-			err:            errors.New(`invalid label value: "-rego": a valid label must be an empty string or consist of alphanumeric characters, '-', '_' or '.', and must start and end with an alphanumeric character (e.g. 'MyValue',  or 'my_value',  or '12345', regex used for validation is '(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])?')`),
+			err:            errors.New(`values[0][foo]: Invalid value: "-rego": a valid label must be an empty string or consist of alphanumeric characters, '-', '_' or '.', and must start and end with an alphanumeric character (e.g. 'MyValue',  or 'my_value',  or '12345', regex used for validation is '(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])?')`),
 		},
 	}
 
