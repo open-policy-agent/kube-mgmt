@@ -5,13 +5,14 @@
 package configmap
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/open-policy-agent/kube-mgmt/pkg/opa"
+	"github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
@@ -34,7 +35,8 @@ const (
 	dataStatusAnnotationKey = "openpolicyagent.org/data-status"
 
 	// Special namespace in Kubernetes federation that holds scheduling policies.
-	kubeFederationSchedulingPolicy = "kube-federation-scheduling-policy"
+	// commented because staticcheck: 'const kubeFederationSchedulingPolicy is unused (U1000)'
+	// kubeFederationSchedulingPolicy = "kube-federation-scheduling-policy"
 
 	resyncPeriod        = time.Second * 60
 	syncResetBackoffMin = time.Second
@@ -116,7 +118,7 @@ func New(kubeconfig *rest.Config, opa opa.Client, matcher func(*v1.ConfigMap) (b
 	cpy.APIPath = "/api"
 	cpy.ContentType = runtime.ContentTypeJSON
 	scheme := runtime.NewScheme()
-	cpy.NegotiatedSerializer = serializer.DirectCodecFactory{CodecFactory: serializer.NewCodecFactory(scheme)}
+	cpy.NegotiatedSerializer = serializer.WithoutConversionCodecFactory{CodecFactory: serializer.NewCodecFactory(scheme)}
 	builder := runtime.NewSchemeBuilder(func(scheme *runtime.Scheme) error {
 		scheme.AddKnownTypes(
 			*cpy.GroupVersion,
@@ -274,7 +276,7 @@ func (s *Sync) setStatusAnnotation(cm *v1.ConfigMap, st status, isPolicy bool) {
 	if err != nil {
 		logrus.Errorf("Failed to serialize patch for %v/%v: %v", cm.Namespace, cm.Name, err)
 	}
-	_, err = s.clientset.CoreV1().ConfigMaps(cm.Namespace).Patch(cm.Name, types.StrategicMergePatchType, bs)
+	_, err = s.clientset.CoreV1().ConfigMaps(cm.Namespace).Patch(context.TODO(), cm.Name, types.StrategicMergePatchType, bs, metav1.PatchOptions{})
 	if err != nil {
 		logrus.Errorf("Failed to %v for %v/%v: %v", statusAnnotationKey, cm.Namespace, cm.Name, err)
 	}
