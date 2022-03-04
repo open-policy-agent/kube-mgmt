@@ -8,9 +8,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"hash/fnv"
+	"sort"
 	"strings"
 	"time"
 
+	"github.com/hashicorp/go-multierror"
 	"github.com/open-policy-agent/kube-mgmt/pkg/opa"
 	"github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
@@ -188,13 +191,20 @@ func (s *Sync) add(obj interface{}) {
 func (s *Sync) update(oldObj, obj interface{}) {
 	cm := obj.(*v1.ConfigMap)
 	if match, isPolicy := s.matcher(cm); match {
+		oldCm := oldObj.(*v1.ConfigMap)
+		// avoid processing new versions of the ConfigMap that don't actually
+		// change policy, data or labels
+		// (issue https://github.com/open-policy-agent/kube-mgmt/issues/131)
+		if cm.GetResourceVersion() != oldCm.GetResourceVersion() {
+			fp, oldFp := fingerprint(cm), fingerprint(oldCm)
+			if fp == oldFp {
+				return
+			}
+		}
 		s.syncAdd(cm, isPolicy)
 	} else {
 		// check if the label was removed
-		oldCm := oldObj.(*v1.ConfigMap)
-		if match, isPolicy := s.matcher(oldCm); match {
-			s.syncRemove(oldCm, isPolicy)
-		}
+		s.delete(oldObj)
 	}
 }
 
@@ -207,7 +217,15 @@ func (s *Sync) delete(obj interface{}) {
 
 func (s *Sync) syncAdd(cm *v1.ConfigMap, isPolicy bool) {
 	path := fmt.Sprintf("%v/%v", cm.Namespace, cm.Name)
-	for key, value := range cm.Data {
+	// sort keys so that errors, if any, are always in the same order
+	sortedKeys := make([]string, 0, len(cm.Data))
+	for key := range cm.Data {
+		sortedKeys = append(sortedKeys, key)
+	}
+	sort.Strings(sortedKeys)
+	var multiErr error
+	for _, key := range sortedKeys {
+		value := cm.Data[key]
 		id := fmt.Sprintf("%v/%v", path, key)
 
 		var err error
@@ -225,15 +243,18 @@ func (s *Sync) syncAdd(cm *v1.ConfigMap, isPolicy bool) {
 		}
 
 		if err != nil {
-			s.setStatusAnnotation(cm, status{
-				Status: "error",
-				Error:  err,
-			}, isPolicy)
-		} else {
-			s.setStatusAnnotation(cm, status{
-				Status: "ok",
-			}, isPolicy)
+			multiErr = multierror.Append(multiErr, err)
 		}
+	}
+	if multiErr != nil {
+		s.setStatusAnnotation(cm, status{
+			Status: "error",
+			Error:  multiErr,
+		}, isPolicy)
+	} else {
+		s.setStatusAnnotation(cm, status{
+			Status: "ok",
+		}, isPolicy)
 	}
 }
 
@@ -265,10 +286,20 @@ func (s *Sync) setStatusAnnotation(cm *v1.ConfigMap, st status, isPolicy bool) {
 	if err != nil {
 		logrus.Errorf("Failed to serialize %v for %v/%v: %v", statusAnnotationKey, cm.Namespace, cm.Name, err)
 	}
+	annotation := string(bs)
+	if cm.Annotations != nil {
+		if existing, ok := cm.Annotations[policyStatusAnnotationKey]; ok {
+			if existing == annotation {
+				// If the annotation did not change, do not write it.
+				// (issue https://github.com/open-policy-agent/kube-mgmt/issues/90)
+				return
+			}
+		}
+	}
 	patch := map[string]interface{}{
 		"metadata": map[string]interface{}{
 			"annotations": map[string]interface{}{
-				policyStatusAnnotationKey: string(bs),
+				policyStatusAnnotationKey: annotation,
 			},
 		},
 	}
@@ -301,4 +332,13 @@ func (s *Sync) syncReset(id string) {
 type status struct {
 	Status string `json:"status"`
 	Error  error  `json:"error,omitempty"`
+}
+
+// fingerprint for the labels and data of a configmap.
+func fingerprint(cm *v1.ConfigMap) uint64 {
+	hash := fnv.New64a()
+	data := json.NewEncoder(hash)
+	data.Encode(cm.Labels)
+	data.Encode(cm.Data)
+	return hash.Sum64()
 }
