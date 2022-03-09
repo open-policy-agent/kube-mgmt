@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -20,6 +19,7 @@ import (
 	"github.com/open-policy-agent/kube-mgmt/pkg/types"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/rest"
@@ -27,9 +27,10 @@ import (
 
 // GenericSync replicates Kubernetes resources into OPA as raw JSON.
 type GenericSync struct {
-	kubeconfig *rest.Config
-	opa        opa_client.Data
-	ns         types.ResourceType
+	client      dynamic.Interface
+	opa         opa_client.Data
+	ns          types.ResourceType
+	createError error // to support deprecated calls to New / Run
 }
 
 // The min/max amount of time to wait when resetting the synchronizer.
@@ -38,36 +39,57 @@ const (
 	backoffMin = time.Second
 )
 
-// New returns a new GenericSync that cna be started.
+// New returns a new GenericSync that can be started.
+// Deprecated: Please Use NewFromInterface instead.
 func New(kubeconfig *rest.Config, opa opa_client.Data, ns types.ResourceType) *GenericSync {
+	client, err := dynamic.NewForConfig(kubeconfig)
+	if err != nil {
+		return &GenericSync{createError: err}
+	}
+	return NewFromInterface(client, opa, ns)
+}
+
+// NewFromInterface returns a new GenericSync that can be started.
+func NewFromInterface(client dynamic.Interface, opa opa_client.Data, ns types.ResourceType) *GenericSync {
 	return &GenericSync{
-		kubeconfig: kubeconfig,
-		ns:         ns,
-		opa:        opa.Prefix(ns.Resource),
+		client: client,
+		ns:     ns,
+		opa:    opa.Prefix(ns.Resource),
 	}
 }
 
 // Run starts the synchronizer. To stop the synchronizer send a message to the
 // channel.
+// Deprecated: Please use RunContext instead.
 func (s *GenericSync) Run() (chan struct{}, error) {
 
-	client, err := dynamic.NewForConfig(s.kubeconfig)
-	if err != nil {
-		return nil, err
+	// To support legacy way of creating GenericSync from *rest.Config
+	if s.createError != nil {
+		return nil, s.createError
 	}
 
 	quit := make(chan struct{})
-	go s.loop(client, quit)
+	go s.loop(quit)
 	return quit, nil
 }
 
-func (s *GenericSync) loop(client dynamic.Interface, quit chan struct{}) {
+// RunContext starts the synchronizer in the foreground.
+// To stop the synchronizer, cancel the context.
+func (s *GenericSync) RunContext(ctx context.Context) error {
+	if s.createError != nil {
+		return s.createError
+	}
+	s.loop(ctx.Done())
+	return nil
+}
+
+func (s *GenericSync) loop(quit <-chan struct{}) {
 
 	defer func() {
 		logrus.Infof("Sync for %v finished. Exiting.", s.ns)
 	}()
 
-	resource := client.Resource(schema.GroupVersionResource{
+	resource := s.client.Resource(schema.GroupVersionResource{
 		Group:    s.ns.Group,
 		Version:  s.ns.Version,
 		Resource: s.ns.Resource,
@@ -138,7 +160,7 @@ func (errChannelClosed) Error() string {
 // during the replication process this function returns and indicates whether
 // the synchronizer should backoff. The synchronizer will backoff whenever the
 // Kubernetes API returns an error.
-func (s *GenericSync) sync(resource dynamic.NamespaceableResourceInterface, quit chan struct{}) error {
+func (s *GenericSync) sync(resource dynamic.NamespaceableResourceInterface, quit <-chan struct{}) error {
 
 	logrus.Infof("Syncing %v.", s.ns)
 	tList := time.Now()
@@ -202,7 +224,7 @@ func (s *GenericSync) sync(resource dynamic.NamespaceableResourceInterface, quit
 }
 
 func (s *GenericSync) syncAdd(obj runtime.Object) error {
-	path, err := s.objPath(obj)
+	path, err := objPath(obj, s.ns.Namespaced)
 	if err != nil {
 		return err
 	}
@@ -210,7 +232,7 @@ func (s *GenericSync) syncAdd(obj runtime.Object) error {
 }
 
 func (s *GenericSync) syncRemove(obj runtime.Object) error {
-	path, err := s.objPath(obj)
+	path, err := objPath(obj, s.ns.Namespaced)
 	if err != nil {
 		return err
 	}
@@ -220,7 +242,7 @@ func (s *GenericSync) syncRemove(obj runtime.Object) error {
 func (s *GenericSync) syncAll(objs []unstructured.Unstructured) error {
 
 	// Build a list of patches to apply.
-	payload, err := s.generateSyncPayload(objs)
+	payload, err := generateSyncPayload(objs, s.ns.Namespaced)
 	if err != nil {
 		return err
 	}
@@ -228,10 +250,10 @@ func (s *GenericSync) syncAll(objs []unstructured.Unstructured) error {
 	return s.opa.PutData("/", payload)
 }
 
-func (s *GenericSync) generateSyncPayload(objs []unstructured.Unstructured) (map[string]interface{}, error) {
+func generateSyncPayload(objs []unstructured.Unstructured, namespaced bool) (map[string]interface{}, error) {
 	combined := make(map[string]interface{}, len(objs))
 	for _, obj := range objs {
-		objPath, err := s.objPath(&obj)
+		path, err := objPath(&obj, namespaced)
 		if err != nil {
 			return nil, err
 		}
@@ -241,7 +263,7 @@ func (s *GenericSync) generateSyncPayload(objs []unstructured.Unstructured) (map
 		// being the correct types due to the expected uniform
 		// objPath's for each of the similar object types being
 		// sync'd with the GenericSync instance.
-		segments := strings.Split(objPath, "/")
+		segments := strings.Split(path, "/")
 		dir := combined
 		for i := 0; i < len(segments)-1; i++ {
 			next, ok := combined[segments[i]]
@@ -257,14 +279,14 @@ func (s *GenericSync) generateSyncPayload(objs []unstructured.Unstructured) (map
 	return combined, nil
 }
 
-func (s *GenericSync) objPath(obj runtime.Object) (string, error) {
+func objPath(obj runtime.Object, namespaced bool) (string, error) {
 	m, err := meta.Accessor(obj)
 	if err != nil {
 		return "", err
 	}
 	name := m.GetName()
 	var path string
-	if s.ns.Namespaced {
+	if namespaced {
 		path = m.GetNamespace() + "/" + name
 	} else {
 		path = name
