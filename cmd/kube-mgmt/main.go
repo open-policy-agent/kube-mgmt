@@ -5,6 +5,7 @@
 package main
 
 import (
+	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
@@ -22,6 +23,7 @@ import (
 	"github.com/open-policy-agent/kube-mgmt/pkg/version"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 )
@@ -172,22 +174,25 @@ func run(params *params) {
 		}
 	}
 
-	for _, gvk := range params.replicateCluster {
-		sync := data.New(kubeconfig, opa.New(params.opaURL, params.opaAuth).Prefix(params.replicatePath), getResourceType(gvk, false))
-		_, err := sync.Run()
+	var client dynamic.Interface
+	if len(params.replicateCluster)+len(params.replicateNamespace) > 0 {
+		client, err = dynamic.NewForConfig(kubeconfig)
 		if err != nil {
-			logrus.Fatalf("Failed to start data sync for %v: %v", gvk, err)
+			logrus.Fatalf("Failed to get dynamic client: %v", err)
 		}
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	for _, gvk := range params.replicateCluster {
+		sync := data.NewFromInterface(client, opa.New(params.opaURL, params.opaAuth).Prefix(params.replicatePath), getResourceType(gvk, false))
+		go sync.RunContext(ctx)
 	}
 
 	for _, gvk := range params.replicateNamespace {
-		sync := data.New(kubeconfig, opa.New(params.opaURL, params.opaAuth).Prefix(params.replicatePath), getResourceType(gvk, true))
-		_, err := sync.Run()
-		if err != nil {
-			logrus.Fatalf("Failed to start data sync for %v: %v", gvk, err)
-		}
+		sync := data.NewFromInterface(client, opa.New(params.opaURL, params.opaAuth).Prefix(params.replicatePath), getResourceType(gvk, true))
+		go sync.RunContext(ctx)
 	}
-
 	quit := make(chan struct{})
 	<-quit
 }
