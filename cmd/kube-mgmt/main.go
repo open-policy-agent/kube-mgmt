@@ -57,6 +57,9 @@ func main() {
 	rootCmd := &cobra.Command{
 		Use:   commandName,
 		Short: fmt.Sprintf("%v manages OPA on top of Kubernetes", commandName),
+		FParseErrWhitelist: cobra.FParseErrWhitelist{
+			UnknownFlags: true,
+		},
 		Run: func(cmd *cobra.Command, args []string) {
 			if params.version {
 				fmt.Println("Version:", version.Version)
