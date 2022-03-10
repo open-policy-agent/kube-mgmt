@@ -107,3 +107,11 @@ admissionregistration.k8s.io/v1beta1
 {{- $tag := .Values.mgmt.image.tag | default .Chart.AppVersion -}}
 {{ printf "%s:%s" .Values.mgmt.image.repository $tag }}
 {{- end -}}
+
+{{- define "opa.dnsPolicy" -}}
+{{- if .Values.dnsPolicyOverride -}}
+dnsPolicy: "{{ .Values.dnsPolicyOverride }}"
+{{ else if .Values.hostNetwork.enabled -}}
+dnsPolicy: "ClusterFirstWithHostNet"
+{{ end -}}
+{{ end -}}

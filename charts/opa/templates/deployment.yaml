@@ -81,6 +81,7 @@ spec:
 {{- if .Values.hostNetwork.enabled }}
       hostNetwork: true
 {{- end }}
+      {{- include "opa.dnsPolicy" . | nindent 6 -}}
       containers:
         - name: opa
           ports:
