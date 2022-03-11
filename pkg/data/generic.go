@@ -10,19 +10,27 @@ import (
 	"strings"
 	"time"
 
-	"github.com/sirupsen/logrus"
-
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-
 	opa_client "github.com/open-policy-agent/kube-mgmt/pkg/opa"
 	"github.com/open-policy-agent/kube-mgmt/pkg/types"
+
+	"github.com/sirupsen/logrus"
+
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/cache"
+	"k8s.io/client-go/util/workqueue"
+)
+
+// The min/max amount of time to wait when resetting the synchronizer.
+const (
+	backoffMax = time.Second * 30
+	backoffMin = time.Second
 )
 
 // GenericSync replicates Kubernetes resources into OPA as raw JSON.
@@ -30,14 +38,9 @@ type GenericSync struct {
 	client      dynamic.Interface
 	opa         opa_client.Data
 	ns          types.ResourceType
+	limiter     workqueue.RateLimiter
 	createError error // to support deprecated calls to New / Run
 }
-
-// The min/max amount of time to wait when resetting the synchronizer.
-const (
-	backoffMax = time.Second * 30
-	backoffMin = time.Second
-)
 
 // New returns a new GenericSync that can be started.
 // Deprecated: Please Use NewFromInterface instead.
@@ -49,12 +52,28 @@ func New(kubeconfig *rest.Config, opa opa_client.Data, ns types.ResourceType) *G
 	return NewFromInterface(client, opa, ns)
 }
 
+type Option func(s *GenericSync)
+
 // NewFromInterface returns a new GenericSync that can be started.
-func NewFromInterface(client dynamic.Interface, opa opa_client.Data, ns types.ResourceType) *GenericSync {
-	return &GenericSync{
+func NewFromInterface(client dynamic.Interface, opa opa_client.Data, ns types.ResourceType, opts ...Option) *GenericSync {
+	s := &GenericSync{
 		client: client,
 		ns:     ns,
 		opa:    opa.Prefix(ns.Resource),
+	}
+	for _, opt := range opts {
+		opt(s)
+	}
+	if s.limiter == nil { // Use default rateLimiter if not configured
+		s.limiter = workqueue.NewItemExponentialFailureRateLimiter(backoffMin, backoffMax)
+	}
+	return s
+}
+
+//WithBackoff tunes the values of exponential backoff
+func WithBackoff(min, max time.Duration) Option {
+	return func(s *GenericSync) {
+		s.limiter = workqueue.NewItemExponentialFailureRateLimiter(min, max)
 	}
 }
 
@@ -69,7 +88,12 @@ func (s *GenericSync) Run() (chan struct{}, error) {
 	}
 
 	quit := make(chan struct{})
-	go s.loop(quit)
+	ctx, cancel := context.WithCancel(context.Background())
+	go func() { // propagate cancel signal from channel to context
+		<-quit
+		cancel()
+	}()
+	go s.RunContext(ctx)
 	return quit, nil
 }
 
@@ -79,167 +103,179 @@ func (s *GenericSync) RunContext(ctx context.Context) error {
 	if s.createError != nil {
 		return s.createError
 	}
-	s.loop(ctx.Done())
+
+	store, queue := s.setup(ctx)
+	go func() {
+		<-ctx.Done()
+		queue.ShutDown()
+	}()
+
+	s.loop(store, queue)
 	return nil
 }
 
-func (s *GenericSync) loop(quit <-chan struct{}) {
+// setup the store and queue for this GenericSync instance
+func (s *GenericSync) setup(ctx context.Context) (cache.Store, workqueue.DelayingInterface) {
 
-	defer func() {
-		logrus.Infof("Sync for %v finished. Exiting.", s.ns)
-	}()
-
-	resource := s.client.Resource(schema.GroupVersionResource{
+	baseResource := s.client.Resource(schema.GroupVersionResource{
 		Group:    s.ns.Group,
 		Version:  s.ns.Version,
 		Resource: s.ns.Resource,
 	})
+	var resource dynamic.ResourceInterface = baseResource
+	if s.ns.Namespaced {
+		resource = baseResource.Namespace(metav1.NamespaceAll)
+	}
 
-	delay := backoffMin
+	queue := workqueue.NewNamedDelayingQueue(s.ns.String())
+	store, controller := cache.NewInformer(
+		&cache.ListWatch{
+			ListFunc: func(options metav1.ListOptions) (runtime.Object, error) {
+				return resource.List(ctx, options)
+			},
+			WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
+				return resource.Watch(ctx, options)
+			},
+		},
+		&unstructured.Unstructured{},
+		0,
+		queueResourceHandler{queue},
+	)
 
-	for {
+	start, quit := time.Now(), ctx.Done()
+	go controller.Run(quit)
+	for !cache.WaitForCacheSync(quit, controller.HasSynced) {
+		logrus.Warnf("Failed to sync cache for %v, retrying...", s.ns)
+	}
+	if controller.HasSynced() {
+		logrus.Infof("Initial informer sync for %v completed, took %v", s.ns, time.Since(start))
+	}
 
-		err := s.sync(resource, quit)
-		if err == nil {
-			return
-		}
+	return store, queue
+}
 
-		switch err.(type) {
+type queueResourceHandler struct {
+	workqueue.Interface
+}
 
-		case errChannelClosed:
-			logrus.Infof("Sync channel for %v closed. Restarting immediately.", s.ns)
-			delay = backoffMin
+// OnAdd implements ResourceHandler
+func (q queueResourceHandler) OnAdd(obj interface{}) {
+	key, err := cache.MetaNamespaceKeyFunc(obj)
+	if err != nil {
+		logrus.Warnf("failed to retrieve key: %v", err)
+		return
+	}
+	q.Add(key)
+}
 
-		case errOPA:
-			logrus.Errorf("Sync for %v failed due to OPA error. Trying again in %v. Reason: %v", s.ns, delay, err)
-			delay = backoffMin
-			t := time.NewTimer(delay)
-			select {
-			case <-t.C:
-				break
-			case <-quit:
-				return
-			}
+func (q queueResourceHandler) resourceVersionMatch(oldObj, newObj interface{}) bool {
+	var (
+		oldMeta metav1.Object
+		newMeta metav1.Object
+		err     error
+	)
+	oldMeta, err = meta.Accessor(oldObj)
+	if err == nil {
+		newMeta, err = meta.Accessor(newObj)
+	}
+	if err != nil {
+		logrus.Warnf("failed to retrieve meta: %v", err)
+		return false
+	}
+	return newMeta.GetResourceVersion() == oldMeta.GetResourceVersion()
+}
 
-		case errKubernetes:
-			logrus.Errorf("Sync for %v failed due to Kubernetes error. Trying again in %v. Reason: %v", s.ns, delay, err)
-			delay *= 2
-			if delay > backoffMax {
-				delay = backoffMax
-			}
-			t := time.NewTimer(delay)
-			select {
-			case <-t.C:
-				break
-			case <-quit:
-				return
-			}
-		}
+// OnUpdate implements ResourceHandler
+func (q queueResourceHandler) OnUpdate(oldObj, newObj interface{}) {
+	if !q.resourceVersionMatch(oldObj, newObj) { // Avoid sync flood on relist. We don't use resync.
+		q.OnAdd(newObj)
 	}
 }
 
-type errKubernetes struct{ error }
-
-type errOPA struct{ error }
-
-type errChannelClosed struct{}
-
-func (err errKubernetes) Unwrap() error {
-	return err.error
+// OnDelete implements ResourceHandler
+func (q queueResourceHandler) OnDelete(obj interface{}) {
+	key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(obj)
+	if err != nil {
+		logrus.Warnf("failed to retrieve key: %v", err)
+		return
+	}
+	q.Add(key)
 }
 
-func (err errOPA) Unwrap() error {
-	return err.error
-}
+const initPath = ""
 
-func (errChannelClosed) Error() string {
-	return "channel closed"
-}
-
-// sync starts replicating Kubernetes resources into OPA. If an error occurs
-// during the replication process this function returns and indicates whether
-// the synchronizer should backoff. The synchronizer will backoff whenever the
-// Kubernetes API returns an error.
-func (s *GenericSync) sync(resource dynamic.NamespaceableResourceInterface, quit <-chan struct{}) error {
+// loop starts replicating Kubernetes resources into OPA. If an error occurs
+// during the replication process, this function will backoff and reload
+// all resources into OPA from scratch.
+func (s *GenericSync) loop(store cache.Store, queue workqueue.DelayingInterface) {
 
 	logrus.Infof("Syncing %v.", s.ns)
-	tList := time.Now()
-	result, err := resource.List(context.TODO(), metav1.ListOptions{})
-	if err != nil {
-		return errKubernetes{fmt.Errorf("list: %w", err)}
-	}
+	defer func() {
+		logrus.Infof("Sync for %v finished. Exiting.", s.ns)
+	}()
 
-	dList := time.Since(tList)
-	resourceVersion := result.GetResourceVersion()
-	logrus.Infof("Listed %v and got %v resources with resourceVersion %v. Took %v.", s.ns, len(result.Items), resourceVersion, dList)
+	delay := s.limiter.When(initPath)
+	for !queue.ShuttingDown() {
 
-	tLoad := time.Now()
+		queue.AddAfter(initPath, delay) // this special path will trigger a full load
+		syncDone := false               // discard everything until initPath
 
-	if err := s.syncAll(result.Items); err != nil {
-		return errOPA{fmt.Errorf("reset: %w", err)}
-	}
-
-	dLoad := time.Since(tLoad)
-	logrus.Infof("Loaded %v resources into OPA. Took %v. Starting watch at resourceVersion %v.", s.ns, dLoad, resourceVersion)
-
-	w, err := resource.Watch(context.TODO(), metav1.ListOptions{
-		ResourceVersion: resourceVersion,
-	})
-	if err != nil {
-		return errKubernetes{fmt.Errorf("watch: %w", err)}
-	}
-
-	defer w.Stop()
-
-	ch := w.ResultChan()
-
-	for {
-		select {
-		case evt := <-ch:
-			switch evt.Type {
-			case watch.Added:
-				err := s.syncAdd(evt.Object)
-				if err != nil {
-					return errOPA{fmt.Errorf("add event: %w", err)}
-				}
-			case watch.Modified:
-				err := s.syncAdd(evt.Object)
-				if err != nil {
-					return errOPA{fmt.Errorf("modify event: %w", err)}
-				}
-			case watch.Deleted:
-				err := s.syncRemove(evt.Object)
-				if err != nil {
-					return errOPA{fmt.Errorf("delete event: %w", err)}
-				}
-			case watch.Error:
-				return errKubernetes{fmt.Errorf("error event: %v", evt.Object)}
-			default:
-				return errChannelClosed{}
+		var err error
+		for err == nil {
+			key, shuttingDown := queue.Get()
+			if shuttingDown {
+				return
 			}
-		case <-quit:
+			err = s.processNext(store, key.(string), &syncDone)
+			if key == initPath && syncDone {
+				s.limiter.Forget(initPath)
+			}
+			queue.Done(key)
+		}
+
+		delay := s.limiter.When(initPath)
+		logrus.Errorf("Sync for %v failed, trying again in %v. Reason: %v", s.ns, delay, err)
+	}
+}
+
+func (s *GenericSync) processNext(store cache.Store, path string, syncDone *bool) error {
+
+	// On receiving the initPath, load a full dump of the data store
+	if path == initPath {
+		if *syncDone {
 			return nil
 		}
+		start, list := time.Now(), store.List()
+		if err := s.syncAll(list); err != nil {
+			return err
+		}
+		logrus.Infof("Loaded %d resources of kind %v into OPA. Took %v", len(list), s.ns, time.Since(start))
+		*syncDone = true // sync is now Done
+		return nil
 	}
-}
 
-func (s *GenericSync) syncAdd(obj runtime.Object) error {
-	path, err := objPath(obj, s.ns.Namespaced)
+	// Ignore updates queued before the initial load
+	if !*syncDone {
+		return nil
+	}
+
+	obj, exists, err := store.GetByKey(path)
 	if err != nil {
-		return err
+		return fmt.Errorf("store error: %w", err)
 	}
-	return s.opa.PutData(path, obj)
+	if exists {
+		if err := s.opa.PutData(path, obj); err != nil {
+			return fmt.Errorf("add event: %w", err)
+		}
+	} else {
+		if err := s.opa.PatchData(path, "remove", nil); err != nil {
+			return fmt.Errorf("delete event: %w", err)
+		}
+	}
+	return nil
 }
 
-func (s *GenericSync) syncRemove(obj runtime.Object) error {
-	path, err := objPath(obj, s.ns.Namespaced)
-	if err != nil {
-		return err
-	}
-	return s.opa.PatchData(path, "remove", nil)
-}
-
-func (s *GenericSync) syncAll(objs []unstructured.Unstructured) error {
+func (s *GenericSync) syncAll(objs []interface{}) error {
 
 	// Build a list of patches to apply.
 	payload, err := generateSyncPayload(objs, s.ns.Namespaced)
@@ -250,18 +286,18 @@ func (s *GenericSync) syncAll(objs []unstructured.Unstructured) error {
 	return s.opa.PutData("/", payload)
 }
 
-func generateSyncPayload(objs []unstructured.Unstructured, namespaced bool) (map[string]interface{}, error) {
+func generateSyncPayload(objs []interface{}, namespaced bool) (map[string]interface{}, error) {
 	combined := make(map[string]interface{}, len(objs))
 	for _, obj := range objs {
-		path, err := objPath(&obj, namespaced)
+		path, err := cache.MetaNamespaceKeyFunc(obj)
 		if err != nil {
 			return nil, err
 		}
 
-		// Ensure the path in thee map up to our value exists
+		// Ensure the path in the map up to our value exists
 		// We make some assumptions about the paths that do exist
 		// being the correct types due to the expected uniform
-		// objPath's for each of the similar object types being
+		// paths for each of the similar object types being
 		// sync'd with the GenericSync instance.
 		segments := strings.Split(path, "/")
 		dir := combined
@@ -273,23 +309,8 @@ func generateSyncPayload(objs []unstructured.Unstructured, namespaced bool) (map
 			}
 			dir = next.(map[string]interface{})
 		}
-		dir[segments[len(segments)-1]] = obj.Object
+		dir[segments[len(segments)-1]] = obj
 	}
 
 	return combined, nil
-}
-
-func objPath(obj runtime.Object, namespaced bool) (string, error) {
-	m, err := meta.Accessor(obj)
-	if err != nil {
-		return "", err
-	}
-	name := m.GetName()
-	var path string
-	if namespaced {
-		path = m.GetNamespace() + "/" + name
-	} else {
-		path = name
-	}
-	return path, nil
 }
