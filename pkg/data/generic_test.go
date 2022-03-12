@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/open-policy-agent/kube-mgmt/internal/mock"
 	"github.com/open-policy-agent/kube-mgmt/pkg/types"
 
 	apiv1 "k8s.io/api/core/v1"
@@ -29,8 +30,6 @@ type testCase struct {
 	prefix       string
 	objs         []runtime.Object
 	expected     string
-	// shared between tests
-	expectedJson map[string]interface{}
 }
 
 func TestGenericSync(t *testing.T) {
@@ -482,7 +481,7 @@ func TestGenericSync(t *testing.T) {
 	for _, tc := range testCases {
 
 		tc := tc // We will be running the tests in parallel, so avoid issues with loop var
-		mustUnmarshalJSON(t, []byte(tc.expected), &tc.expectedJson)
+		tc.expected = string(mock.MustMarshal(t, mock.MustUnmarshal(t, []byte(tc.expected))))
 
 		t.Run(fmt.Sprintf("%s - GenerateSyncPayload", tc.label), func(t *testing.T) {
 			t.Parallel()
@@ -507,6 +506,11 @@ func TestGenericSync(t *testing.T) {
 		t.Run(fmt.Sprintf("%s - Update", tc.label), func(t *testing.T) {
 			t.Parallel()
 			tc.testUpdate(t, sc)
+		})
+
+		t.Run(fmt.Sprintf("%s - Retry Run", tc.label), func(t *testing.T) {
+			t.Parallel()
+			tc.testRetryRun(t, sc)
 		})
 
 		t.Run(fmt.Sprintf("%s - Retry Add", tc.label), func(t *testing.T) {
@@ -536,81 +540,132 @@ func (tc testCase) testGenerateSyncPayload(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
-	result := mustJSONRoundTrip(t, patches)
-	mustEqual(t, result, tc.expectedJson)
+	result := mock.MustString(t, patches)
+	mock.MustEqual(t, result, tc.expected)
+}
+
+func (tc *testCase) play(t *testing.T, scheme *runtime.Scheme, client *fake.FakeDynamicClient, lastEvent mock.Event) *mock.Data {
+	t.Helper()
+
+	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(5*time.Second))
+	data := mock.Stage(t, lastEvent.Do(func() error {
+		cancel()
+		return nil
+	}))
+	sync := NewFromInterface(client, data.Prefix(tc.prefix), tc.resourceType, WithBackoff(0, 5*time.Second))
+
+	sync.RunContext(ctx)
+	if d, ok := ctx.Deadline(); ok && d.Before(time.Now()) {
+		t.Fatal("Test canceled because of timeout")
+	}
+	return data
 }
 
 func (tc *testCase) testRun(t *testing.T, scheme *runtime.Scheme) {
-	play := script{}.
-		OnPut("/", tc.expectedJson, nil, nil)
 
-	mock := tc.play(t, scheme, tc.objs, play)
-	mustEqual(t, mock.PrefixList, []string{tc.prefix, tc.resourceType.Resource})
+	client := fake.NewSimpleDynamicClient(scheme, tc.objs...)
+	play := mock.Script{}.
+		Expect(mock.PutData("/", tc.expected))
+
+	data := tc.play(t, scheme, client, play)
+	mock.MustEqual(t, data.PrefixList, []string{tc.prefix, tc.resourceType.Resource})
 }
 
 func (tc *testCase) testAdd(t *testing.T, scheme *runtime.Scheme) {
 	obj := tc.objs[0]
-	play := script{}.
-		OnPut("/", nil, tc.mustCreate(t, obj), nil).
-		OnPut(mustKey(t, obj), mustJSONRoundTrip(t, obj), nil, nil)
 
-	tc.play(t, scheme, nil, play)
+	client := fake.NewSimpleDynamicClient(scheme)
+	play := mock.Script{}.
+		Expect(mock.PutData("/", "{}")).
+		Do(tc.mustCreate(t, client, obj)).
+		Expect(mock.PutData(mustKey(t, obj), mock.MustString(t, obj)))
+
+	tc.play(t, scheme, client, play)
 }
 
 func (tc *testCase) testDelete(t *testing.T, scheme *runtime.Scheme) {
 	obj := tc.objs[0]
-	play := script{}.
-		OnPut("/", tc.expectedJson, tc.mustRemove(t, obj), nil).
-		OnPatch(mustKey(t, obj), nil, nil)
 
-	tc.play(t, scheme, tc.objs, play)
+	client := fake.NewSimpleDynamicClient(scheme, tc.objs...)
+	play := mock.Script{}.
+		Expect(mock.PutData("/")).
+		Do(tc.mustRemove(t, client, obj)).
+		Expect(mock.PatchData(mustKey(t, obj), "remove"))
+
+	tc.play(t, scheme, client, play)
 }
 
 func (tc *testCase) testUpdate(t *testing.T, scheme *runtime.Scheme) {
-	change := &unstructured.Unstructured{Object: mustJSONRoundTrip(t, tc.objs[0])}
+	change := mustUnstructure(t, tc.objs[0])
 	change.SetLabels(map[string]string{"test": "update"})
 	change.SetResourceVersion("1")
 
-	play := script{}.
-		OnPut("/", tc.expectedJson, tc.mustUpdate(t, change), nil).
-		OnPut(mustKey(t, change), change.Object, nil, nil)
+	client := fake.NewSimpleDynamicClient(scheme, tc.objs...)
+	play := mock.Script{}.
+		Expect(mock.PutData("/")).
+		Do(tc.mustUpdate(t, client, change)).
+		Expect(mock.PutData(mustKey(t, change), mock.MustString(t, change.Object)))
 
-	tc.play(t, scheme, tc.objs, play)
+	tc.play(t, scheme, client, play)
+}
+
+func (tc *testCase) testRetryRun(t *testing.T, scheme *runtime.Scheme) {
+
+	client := fake.NewSimpleDynamicClient(scheme, tc.objs...)
+	play := mock.Script{}.
+		Expect(mock.PutData("/")).
+		Do(mock.MustError(errors.New("test fail update"))).
+		Expect(mock.PutData("/", tc.expected))
+
+	tc.play(t, scheme, client, play)
 }
 
 func (tc *testCase) testRetryAdd(t *testing.T, scheme *runtime.Scheme) {
-	play := script{}.
-		OnPut("/", tc.expectedJson, nil, errors.New("test fail update")).
-		OnPut("/", tc.expectedJson, nil, nil)
+	obj := tc.objs[0]
 
-	tc.play(t, scheme, tc.objs, play)
+	client := fake.NewSimpleDynamicClient(scheme)
+	play := mock.Script{}.
+		Expect(mock.PutData("/")).
+		Do(tc.mustCreate(t, client, obj)).
+		Expect(mock.PutData(mustKey(t, obj))).
+		Do(mock.MustError(errors.New("test fail update"))).
+		Expect(mock.PutData("/"))
+
+	tc.play(t, scheme, client, play)
 }
 
 func (tc *testCase) testRetryUpdate(t *testing.T, scheme *runtime.Scheme) {
-	change := &unstructured.Unstructured{Object: mustJSONRoundTrip(t, tc.objs[0])}
+	change := mustUnstructure(t, tc.objs[0])
 	change.SetLabels(map[string]string{"test": "update"})
 	change.SetResourceVersion("1")
 
-	play := script{}.
-		OnPut("/", tc.expectedJson, tc.mustUpdate(t, change), nil).
-		OnPut(mustKey(t, change), change.Object, nil, errors.New("Failed to update")).
-		OnPut("/", nil, nil, nil)
+	client := fake.NewSimpleDynamicClient(scheme, tc.objs...)
+	play := mock.Script{}.
+		Expect(mock.PutData("/")).
+		Do(tc.mustUpdate(t, client, change)).
+		Expect(mock.PutData(mustKey(t, change))).
+		Do(mock.MustError(errors.New("Failed to update"))).
+		Expect(mock.PutData("/"))
 		// don't check the payload on this last put, because we
-		// have removed an item so it no longer matches the tc.expectedJson
+		// have removed an item so it no longer matches the tc.expected
 
-	tc.play(t, scheme, tc.objs, play)
+	tc.play(t, scheme, client, play)
 }
 
 func (tc *testCase) testRetryDelete(t *testing.T, scheme *runtime.Scheme) {
 	obj := tc.objs[0]
-	play := script{}.
-		OnPut("/", tc.expectedJson, tc.mustRemove(t, obj), nil).
-		OnPatch(mustKey(t, obj), nil, errors.New("test Patch failed")).
-		OnPut("/", nil, nil, nil)
-		// don't check the payload on this last put, because we
-		// have removed an item so it no longer matches the tc.expectedJson
 
-	tc.play(t, scheme, tc.objs, play)
+	client := fake.NewSimpleDynamicClient(scheme, tc.objs...)
+	play := mock.Script{}.
+		Expect(mock.PutData("/")).
+		Do(tc.mustRemove(t, client, obj)).
+		Expect(mock.PatchData(mustKey(t, obj), "remove")).
+		Do(mock.MustError(errors.New("test Patch failed"))).
+		Expect(mock.PutData("/"))
+		// don't check the payload on this last put, because we
+		// have removed an item so it no longer matches the tc.expected
+
+	tc.play(t, scheme, client, play)
 }
 
 func (tc *testCase) mustGetResource(t *testing.T, client *fake.FakeDynamicClient, useNamespaceFrom runtime.Object) dynamic.ResourceInterface {
@@ -631,19 +686,20 @@ func (tc *testCase) mustGetResource(t *testing.T, client *fake.FakeDynamicClient
 	return nsr.Namespace(ns)
 }
 
-func (tc *testCase) mustCreate(t *testing.T, obj runtime.Object) func(*fake.FakeDynamicClient) {
-	return func(client *fake.FakeDynamicClient) {
+func (tc *testCase) mustCreate(t *testing.T, client *fake.FakeDynamicClient, obj runtime.Object) mock.Action {
+	return func() error {
 		t.Helper()
 
 		r := tc.mustGetResource(t, client, obj)
-		if _, err := r.Create(context.Background(), &unstructured.Unstructured{Object: mustJSONRoundTrip(t, obj)}, metav1.CreateOptions{}); err != nil {
+		if _, err := r.Create(context.Background(), mustUnstructure(t, tc.objs[0]), metav1.CreateOptions{}); err != nil {
 			t.Fatalf("Failed to create object %v: %v", obj, err)
 		}
+		return nil
 	}
 }
 
-func (tc *testCase) mustRemove(t *testing.T, obj runtime.Object) func(*fake.FakeDynamicClient) {
-	return func(client *fake.FakeDynamicClient) {
+func (tc *testCase) mustRemove(t *testing.T, client *fake.FakeDynamicClient, obj runtime.Object) mock.Action {
+	return func() (zero error) {
 		t.Helper()
 
 		m, err := meta.Accessor(obj)
@@ -654,29 +710,20 @@ func (tc *testCase) mustRemove(t *testing.T, obj runtime.Object) func(*fake.Fake
 		if err := r.Delete(context.Background(), m.GetName(), metav1.DeleteOptions{}); err != nil {
 			t.Fatalf("Failed to remove object %v: %v", obj, err)
 		}
+		return nil
 	}
 }
 
-func (tc *testCase) mustUpdate(t *testing.T, obj runtime.Object) func(*fake.FakeDynamicClient) {
-	return func(client *fake.FakeDynamicClient) {
+func (tc *testCase) mustUpdate(t *testing.T, client *fake.FakeDynamicClient, obj runtime.Object) mock.Action {
+	return func() error {
 		t.Helper()
 
 		r := tc.mustGetResource(t, client, obj)
 		if _, err := r.Update(context.Background(), obj.(*unstructured.Unstructured), metav1.UpdateOptions{}); err != nil {
 			t.Fatalf("Failed to create object %v: %v", obj, err)
 		}
+		return nil
 	}
-}
-
-func (tc *testCase) play(t *testing.T, scheme *runtime.Scheme, objs []runtime.Object, play script) *mockData {
-	t.Helper()
-
-	client := fake.NewSimpleDynamicClient(scheme, objs...)
-	mock := &mockData{}
-	sync := NewFromInterface(client, mock.Prefix(tc.prefix), tc.resourceType, WithBackoff(0, 5*time.Second))
-
-	mock.Play(t, client, sync, play)
-	return mock
 }
 
 func mustKey(t *testing.T, obj runtime.Object) string {
@@ -695,4 +742,13 @@ func mustGvr(resourceType types.ResourceType) schema.GroupVersionResource {
 		Version:  resourceType.Version,
 		Resource: resourceType.Resource,
 	}
+}
+
+func mustUnstructure(t *testing.T, obj runtime.Object) *unstructured.Unstructured {
+	copiedObj := mock.MustUnmarshal(t, mock.MustMarshal(t, obj))
+	if asMap, ok := copiedObj.(map[string]interface{}); ok {
+		return &unstructured.Unstructured{Object: asMap}
+	}
+	t.Fatalf("Failed to copy %#v as a map[string]interface{}", obj)
+	return nil // to make staticcheck happy
 }
