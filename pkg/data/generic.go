@@ -19,7 +19,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/rest"
@@ -29,17 +29,19 @@ import (
 
 // The min/max amount of time to wait when resetting the synchronizer.
 const (
-	backoffMax = time.Second * 30
-	backoffMin = time.Second
+	backoffMax   = time.Second * 30
+	backoffMin   = time.Second
+	jitterFactor = 1.2
 )
 
 // GenericSync replicates Kubernetes resources into OPA as raw JSON.
 type GenericSync struct {
-	client      dynamic.Interface
-	opa         opa_client.Data
-	ns          types.ResourceType
-	limiter     workqueue.RateLimiter
-	createError error // to support deprecated calls to New / Run
+	createError  error // to support deprecated calls to New / Run
+	client       dynamicClient
+	opa          opa_client.Data
+	ns           types.ResourceType
+	limiter      workqueue.RateLimiter
+	jitterFactor float64
 }
 
 // New returns a new GenericSync that can be started.
@@ -57,9 +59,10 @@ type Option func(s *GenericSync)
 // NewFromInterface returns a new GenericSync that can be started.
 func NewFromInterface(client dynamic.Interface, opa opa_client.Data, ns types.ResourceType, opts ...Option) *GenericSync {
 	s := &GenericSync{
-		client: client,
-		ns:     ns,
-		opa:    opa.Prefix(ns.Resource),
+		client:       dynamicClient{client},
+		ns:           ns,
+		opa:          opa.Prefix(ns.Resource),
+		jitterFactor: jitterFactor,
 	}
 	for _, opt := range opts {
 		opt(s)
@@ -70,10 +73,11 @@ func NewFromInterface(client dynamic.Interface, opa opa_client.Data, ns types.Re
 	return s
 }
 
-//WithBackoff tunes the values of exponential backoff
-func WithBackoff(min, max time.Duration) Option {
+//WithBackoff tunes the values of exponential backoff and jitter factor
+func WithBackoff(min, max time.Duration, jitterFactor float64) Option {
 	return func(s *GenericSync) {
 		s.limiter = workqueue.NewItemExponentialFailureRateLimiter(min, max)
+		s.jitterFactor = jitterFactor
 	}
 }
 
@@ -117,16 +121,7 @@ func (s *GenericSync) RunContext(ctx context.Context) error {
 // setup the store and queue for this GenericSync instance
 func (s *GenericSync) setup(ctx context.Context) (cache.Store, workqueue.DelayingInterface) {
 
-	baseResource := s.client.Resource(schema.GroupVersionResource{
-		Group:    s.ns.Group,
-		Version:  s.ns.Version,
-		Resource: s.ns.Resource,
-	})
-	var resource dynamic.ResourceInterface = baseResource
-	if s.ns.Namespaced {
-		resource = baseResource.Namespace(metav1.NamespaceAll)
-	}
-
+	resource := s.client.ResourceFor(s.ns, metav1.NamespaceAll)
 	queue := workqueue.NewNamedDelayingQueue(s.ns.String())
 	store, controller := cache.NewInformer(
 		&cache.ListWatch{
@@ -139,7 +134,7 @@ func (s *GenericSync) setup(ctx context.Context) (cache.Store, workqueue.Delayin
 		},
 		&unstructured.Unstructured{},
 		0,
-		queueResourceHandler{queue},
+		resourceEventQueue{queue},
 	)
 
 	start, quit := time.Now(), ctx.Done()
@@ -154,12 +149,13 @@ func (s *GenericSync) setup(ctx context.Context) (cache.Store, workqueue.Delayin
 	return store, queue
 }
 
-type queueResourceHandler struct {
+// resourceEventQueue is a cache.ResourceEventHandler that queues all events
+type resourceEventQueue struct {
 	workqueue.Interface
 }
 
 // OnAdd implements ResourceHandler
-func (q queueResourceHandler) OnAdd(obj interface{}) {
+func (q resourceEventQueue) OnAdd(obj interface{}) {
 	key, err := cache.MetaNamespaceKeyFunc(obj)
 	if err != nil {
 		logrus.Warnf("failed to retrieve key: %v", err)
@@ -168,7 +164,7 @@ func (q queueResourceHandler) OnAdd(obj interface{}) {
 	q.Add(key)
 }
 
-func (q queueResourceHandler) resourceVersionMatch(oldObj, newObj interface{}) bool {
+func (q resourceEventQueue) resourceVersionMatch(oldObj, newObj interface{}) bool {
 	var (
 		oldMeta metav1.Object
 		newMeta metav1.Object
@@ -186,14 +182,14 @@ func (q queueResourceHandler) resourceVersionMatch(oldObj, newObj interface{}) b
 }
 
 // OnUpdate implements ResourceHandler
-func (q queueResourceHandler) OnUpdate(oldObj, newObj interface{}) {
+func (q resourceEventQueue) OnUpdate(oldObj, newObj interface{}) {
 	if !q.resourceVersionMatch(oldObj, newObj) { // Avoid sync flood on relist. We don't use resync.
 		q.OnAdd(newObj)
 	}
 }
 
 // OnDelete implements ResourceHandler
-func (q queueResourceHandler) OnDelete(obj interface{}) {
+func (q resourceEventQueue) OnDelete(obj interface{}) {
 	key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(obj)
 	if err != nil {
 		logrus.Warnf("failed to retrieve key: %v", err)
@@ -214,7 +210,7 @@ func (s *GenericSync) loop(store cache.Store, queue workqueue.DelayingInterface)
 		logrus.Infof("Sync for %v finished. Exiting.", s.ns)
 	}()
 
-	delay := s.limiter.When(initPath)
+	var delay time.Duration
 	for !queue.ShuttingDown() {
 
 		queue.AddAfter(initPath, delay) // this special path will trigger a full load
@@ -233,7 +229,7 @@ func (s *GenericSync) loop(store cache.Store, queue workqueue.DelayingInterface)
 			queue.Done(key)
 		}
 
-		delay := s.limiter.When(initPath)
+		delay := wait.Jitter(s.limiter.When(initPath), s.jitterFactor)
 		logrus.Errorf("Sync for %v failed, trying again in %v. Reason: %v", s.ns, delay, err)
 	}
 }
