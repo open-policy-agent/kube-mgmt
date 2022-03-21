@@ -17,6 +17,11 @@ import (
 // and the Actions to perform on each Request.
 type Script []Step
 
+// String implements fmt.Stringer
+func (s Script) String() string {
+	return s.strings("\n")
+}
+
 // Play creates a client with the script provided, and runs the show.
 // When the script ends, the show is cancelled and the final state
 // of the client returned.
@@ -26,7 +31,7 @@ func Play(t *testing.T, script Script, show func(ctx context.Context, client *Cl
 		return nil
 	}
 
-	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(5*time.Second))
+	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(10*time.Second))
 	// Arrange to cancel the context on the last step
 	last := script[steps-1]
 	script[steps-1].Action = func() error {
@@ -86,7 +91,7 @@ func Play(t *testing.T, script Script, show func(ctx context.Context, client *Cl
 
 	show(ctx, client)
 	if deadline, ok := ctx.Deadline(); ok && deadline.Before(time.Now()) {
-		t.Fatalf("Test failed because of timeout")
+		t.Fatalf("Test %s failed because of timeout", t.Name())
 	}
 	return client
 }

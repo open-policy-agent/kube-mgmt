@@ -83,7 +83,7 @@ func InsertPolicy(path string, expected ...[]byte) Request {
 // (expected value can be omitted)
 func DeletePolicy(path string) Request {
 	return Request{
-		req:  insertPolicyRequest,
+		req:  deletePolicyRequest,
 		path: path,
 	}
 }
