@@ -8,13 +8,13 @@ spec:
   selector:
     app: {{ template "opa.fullname" . }}
   ports:
-  - name: https
-    protocol: TCP
-    port: 443
-    targetPort: {{ .Values.port }}
+  - name: opa
+    port: {{ .Values.port }}
+    targetPort: opa
 {{- if .Values.prometheus.enabled }}
-  - name: http
-    port: {{ .Values.mgmt.port }}
+  - name: diag
+    port: {{ .Values.prometheus.port }}
+    targetPort: diag
 {{- end }}
 {{- if .Values.extraPorts }}
 {{ toYaml .Values.extraPorts | indent 2}}

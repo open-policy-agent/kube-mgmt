@@ -83,11 +83,11 @@ spec:
       containers:
         - name: opa
           ports:
-          - name: https
+          - name: opa
             containerPort: {{ .Values.port }}
 {{- if .Values.prometheus.enabled }}
-          - name: http
-            containerPort: {{ .Values.mgmt.port }}
+          - name: diag
+            containerPort: {{ .Values.prometheus.port }}
 {{- end }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
@@ -103,8 +103,10 @@ spec:
 {{- if .Values.opa }}
             - "--config-file=/config/config.yaml"
 {{- end }}
+{{- if .Values.useHttps }}
             - "--tls-cert-file=/certs/tls.crt"
             - "--tls-private-key-file=/certs/tls.key"
+{{- end }}
             - "--addr=0.0.0.0:{{ .Values.port }}"
             - "--log-level={{ .Values.logLevel }}"
             - "--log-format={{ .Values.logFormat }}"
@@ -114,9 +116,7 @@ spec:
             - "--ignore=.*"
 {{- end }}
 {{- if .Values.prometheus.enabled }}
-            - "--addr=http://0.0.0.0:{{ .Values.mgmt.port }}"
-{{- else if .Values.mgmt.enabled }}
-            - "--addr=http://127.0.0.1:{{ .Values.mgmt.port }}"
+            - "--diagnostic-addr=http://0.0.0.0:{{ .Values.prometheus.port }}"
 {{- end }}
 {{- if or .Values.authz.enabled .Values.bootstrapPolicies }}
             - "/bootstrap"
@@ -141,15 +141,15 @@ spec:
           readinessProbe:
             httpGet:
               path: /health
-              scheme: HTTPS
-              port: {{ .Values.port }}
+              scheme: {{ .Values.useHttps | ternary "HTTPS" "HTTP" }}
+              port: opa
             initialDelaySeconds: 5
             periodSeconds: 10
           livenessProbe:
             httpGet:
               path: /health
-              scheme: HTTPS
-              port: {{ .Values.port }}
+              scheme: {{ .Values.useHttps | ternary "HTTPS" "HTTP" }}
+              port: opa
             initialDelaySeconds: 10
             periodSeconds: 15
 {{- if .Values.mgmt.enabled }}
@@ -166,7 +166,8 @@ spec:
 {{- if .Values.authz.enabled }}
             - --opa-auth-token-file=/bootstrap/mgmt-token
 {{- end }}
-            - --opa-url=http://127.0.0.1:{{ .Values.mgmt.port }}/v1
+            - --opa-url={{ .Values.useHttps | ternary "https" "http" }}://127.0.0.1:{{ .Values.port }}/v1
+            - --opa-allow-insecure
             - --replicate-path={{ .Values.mgmt.replicate.path }}
             - --enable-data={{ .Values.mgmt.data.enabled }}
             - --enable-policies={{ .Values.mgmt.configmapPolicies.enabled }}
