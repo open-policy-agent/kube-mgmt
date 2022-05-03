@@ -23,6 +23,7 @@ certManager:
 # Expose the prometheus scraping endpoint
 prometheus:
   enabled: false
+  port: 8182
 
 ## ServiceMonitor consumed by prometheus-operator
 serviceMonitor:
@@ -124,10 +125,12 @@ image:
 imagePullSecrets: []
 # - registrySecretName
 
-# Port to which the opa pod will bind itself
-# NOTE IF you use a different port make sure it maches the ones in the readinessProbe
-# and livenessProbe
-port: 443
+# Should OPA use TLS or not.
+useHttps: true
+
+# Port to which the opa pod will bind itself,
+# if useHttps is true - then 443, otherwise 8181 if not provided directly.
+port: 8181
 
 extraArgs: []
 
@@ -140,8 +143,6 @@ mgmt:
     repository: openpolicyagent/kube-mgmt
     tag: null # appVersion is used by default, set to desired value to override
     pullPolicy: IfNotPresent      
-# NOTE insecure http port conjointly used for mgmt access and prometheus metrics export
-  port: 8181
   extraArgs: []
   extraEnv: []
   resources: {}
@@ -271,3 +272,4 @@ extraPorts: []
 #   protocol: TCP
 #   name: http
 #   targetPort: http
+
