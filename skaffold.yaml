@@ -11,7 +11,7 @@ build:
           VERSION: "{{.VERSION}}"
           COMMIT: "{{.COMMIT}}"
   local:
-    push: true
+    push: false
     useBuildkit: true
 profiles:
   - name: local

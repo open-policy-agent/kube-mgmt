@@ -1,6 +1,10 @@
 FROM golang:1.17.7-alpine as build
 
-ARG ARCH=amd64
+RUN if [ `uname -m` = "aarch64" ] ; then \
+       ARCH="arm64"; \
+    else \
+       ARCH="amd64"; \
+    fi
 ARG PKG=github.com/open-policy-agent/kube-mgmt
 ARG VERSION=local
 ARG COMMIT=local
