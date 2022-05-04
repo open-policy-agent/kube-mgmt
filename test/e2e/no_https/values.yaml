@@ -1,0 +1,6 @@
+useHttps: false
+
+opa: null
+
+authz:
+  enabled: false

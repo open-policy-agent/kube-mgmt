@@ -1,4 +1,4 @@
-apiVersion: skaffold/v2beta19
+apiVersion: skaffold/v2beta28
 kind: Config
 metadata:
   name: opa
@@ -13,34 +13,19 @@ build:
   local:
     push: true
     useBuildkit: true
-profiles:
-  - name: local
-    activation:
-      - kubeContext: k3d-kube-mgmt
-    deploy:
-      helm:
-        releases:
-          - name: opa
-            chartPath: charts/opa
-            wait: true
-            upgradeOnChange: false
-            skipBuildDependencies: true
-            artifactOverrides:
-              mgmt.image: openpolicyagent/kube-mgmt
-            imageStrategy:
-              helm: {}
-  - name: e2e
-    deploy:
-      helm:
-        releases:
-          - name: opa
-            chartPath: charts/opa
-            wait: true
-            upgradeOnChange: false
-            skipBuildDependencies: true
-            valuesFiles:
-              - test/e2e/values-e2e.yaml
-            artifactOverrides:
-              mgmt.image: openpolicyagent/kube-mgmt
-            imageStrategy:
-              helm: {}
+deploy:
+  helm:
+    releases:
+      - name: kube-mgmt
+        chartPath: charts/opa
+        wait: true
+        setValues:
+          e2e: true
+        valuesFiles:
+          - "test/e2e/{{.E2E_TEST}}/values.yaml"
+        upgradeOnChange: false
+        skipBuildDependencies: true
+        artifactOverrides:
+          mgmt.image: openpolicyagent/kube-mgmt
+        imageStrategy:
+          helm: {}
