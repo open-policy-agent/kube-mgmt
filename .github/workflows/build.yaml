@@ -13,6 +13,8 @@ on:
   pull_request:
     branches: 
       - "master"
+      - "feat/*"
+      - "fix/*"
 
 jobs:
   build_job:
