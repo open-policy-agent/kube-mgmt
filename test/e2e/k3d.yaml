@@ -13,10 +13,17 @@ registries:
       "localhost:5000":
         endpoint:
           - http://kube-mgmt-registry:5000
+ports:
+  - port: 8080:80
+    nodeFilters:
+      - loadbalancer
+  - port: 8443:443
+    nodeFilters:
+      - loadbalancer
 options:
-  k3d:
-    disableLoadbalancer: true
+  # k3d:
+  #   disableLoadbalancer: false
   k3s:
     extraArgs:
-      - arg: "--disable=servicelb,traefik,local-storage,metrics-server"
+      - arg: "--disable=local-storage,metrics-server"
         nodeFilters: ["all"]

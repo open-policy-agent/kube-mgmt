@@ -1,0 +1,31 @@
+{{- if .Values.e2e }}
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRouteTCP
+metadata:
+  name: {{ include "opa.fullname" . }}-websecure
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: HostSNI(`*`)
+      services:
+        - name: {{ include "opa.fullname" . }}
+          namespace: {{ .Release.Namespace }}
+          port: {{ .Values.port }}
+  tls:
+    passthrough: true
+---
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRouteTCP
+metadata:
+  name: {{ include "opa.fullname" . }}-web
+spec:
+  entryPoints:
+    - web
+  routes:
+    - match: HostSNI(`*`)
+      services:
+        - name: {{ include "opa.fullname" . }}
+          namespace: {{ .Release.Namespace }}
+          port: {{ .Values.port }}
+{{- end }}

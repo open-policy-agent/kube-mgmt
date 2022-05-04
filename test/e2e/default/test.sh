@@ -1,0 +1,16 @@
+#!/bin/sh
+set -e
+set -x
+
+TOKEN=$(kubectl exec deploy/kube-mgmt-opa -c mgmt -- cat /bootstrap/mgmt-token)
+OPA="http --default-scheme=https --verify=no -A bearer -a ${TOKEN} :8443/v1"
+
+${OPA}/data | jq -e '.result.test_helm_kubernetes_quickstart|keys|length==3'
+
+kubectl apply -f "$(dirname $0)/../fixture.yaml"
+
+${OPA}/policies | jq -e '.result|any(.id=="default/policy-include/include.rego")==true'
+${OPA}/data/example/include/allow | jq -e '.result|true'
+
+${OPA}/data/default | jq -e '.result|keys==["data-include"]'
+${OPA}/data/default/data-include | jq -e '.result["include.json"].inKey=="inValue"'

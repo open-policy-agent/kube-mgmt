@@ -13,7 +13,7 @@ jobs:
       - uses: actions/checkout@v2
       - uses: volesen/setup-skaffold@v1.1
         with:
-          version: 'v1.33.0'
+          version: 'v1.38.0'
       - uses: extractions/setup-just@v1
       - name: Calculate release version
         id: theVersion
@@ -25,7 +25,7 @@ jobs:
           password: ${{ secrets.DOCKER_PASSWORD }}
       - name: Build docker image
         run: |
-          just VERSION=${{ steps.theVersion.outputs.theVersion }} _build-latest
+          just VERSION=${{ steps.theVersion.outputs.theVersion }} build-release
       - name: Upload Helm artifact
         uses: actions/upload-artifact@v2
         with:

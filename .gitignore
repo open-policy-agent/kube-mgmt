@@ -1,5 +1,5 @@
 bin
 .go
 *.tgz
-skaffold.json
+tags.json
 
