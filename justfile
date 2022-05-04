@@ -11,7 +11,7 @@ defaul:
 build-release:
     #!/usr/bin/env bash
     set -euxo pipefail
-    skaffold build -b kube-mgmt -t {{VERSION}} --file-output=skaffold.json
+    skaffold build -b kube-mgmt -t {{VERSION}} --file-output=tags.json
     helm package charts/opa --version {{VERSION}} --app-version {{VERSION}}
 
     LATEST="$(jq -r .builds[0].imageName skaffold.json):latest"
@@ -36,7 +36,7 @@ k3d: && _skaffold-ctx
     k3d cluster create --config ./test/e2e/k3d.yaml
 
 build: 
-    skaffold build --file-output=tags.json
+    skaffold build --file-output=tags.json --platform=linux/amd64
 
 # install into local k8s
 up: _skaffold-ctx down
@@ -59,5 +59,5 @@ test-e2e-all: build
     #!/usr/bin/env bash
     set -euxo pipefail
     for E in $(find test/e2e/ -mindepth 1 -maxdepth 1 -type d -printf '%f\n'); do
-        just E2E_TEST=${E} test-e2e
+      just E2E_TEST=${E} test-e2e
     done
