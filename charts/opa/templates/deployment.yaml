@@ -15,7 +15,7 @@ spec:
   {{- end }}
   template:
     metadata:
-{{- if or .Values.generateCerts .Values.opa }}
+{{- if or .Values.generateCerts .Values.opa .Values.annotations }}
       annotations:
 {{- if .Values.generateCerts }}
         checksum/certs: {{ include (print $.Template.BasePath "/webhookconfiguration.yaml") . | sha256sum }}
