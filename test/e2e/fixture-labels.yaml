@@ -1,0 +1,46 @@
+---
+kind: ConfigMap
+metadata:
+  name: policy-include
+  labels:
+    kube-mgmt/e2e: "true"
+    qweqwe/policy: "111"
+apiVersion: v1
+data:
+  include.rego: |
+    package example.include
+    allow := true
+--- 
+kind: ConfigMap
+metadata:
+  name: policy-exclude
+  labels:
+    kube-mgmt/e2e: "true"
+    openpolicyagent.org/policy: rego
+apiVersion: v1
+data:
+  exclude.rego: |
+    package example.exclude
+    allow := true
+---
+kind: ConfigMap
+metadata:
+  name: data-include
+  labels:
+    kube-mgmt/e2e: "true"
+    asdasd/data: "222"
+apiVersion: v1
+data:
+  include.json: |
+    {"inKey": "inValue"}
+--- 
+kind: ConfigMap
+metadata:
+  name: data-exclude
+  labels:
+    kube-mgmt/e2e: "true"
+    openpolicyagent.org/data: opa
+apiVersion: v1
+data:
+  exclude.json: |
+    {"exKey": "exValue"}

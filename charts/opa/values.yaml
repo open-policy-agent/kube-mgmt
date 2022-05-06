@@ -146,17 +146,14 @@ mgmt:
   extraArgs: []
   extraEnv: []
   resources: {}
+  namespaces: []
   data:
     enabled: true
-  configmapPolicies:
-# NOTE IF you use these, remember to update the RBAC rules below to allow
-#      permissions to get, list, watch, patch and update configmaps
+  policies:
     enabled: true
-    namespaces: []
-    requireLabel: true
+  # NOTE IF you use these, remember to update the RBAC rules below to allow
+  #      permissions to replicate these things
   replicate:
-# NOTE IF you use these, remember to update the RBAC rules below to allow
-#      permissions to replicate these things
     cluster: []
 #     - [group/]version/resource
     namespace: []

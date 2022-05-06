@@ -38,12 +38,13 @@ type params struct {
 	opaAllowInsecure   bool
 	policyLabel        string
 	policyValue        string
+	dataLabel           string
+	dataValue           string
 	podName            string
 	podNamespace       string
 	enablePolicies     bool
 	enableData         bool
-	policies           []string
-	requirePolicyLabel bool
+	namespaces          []string
 	replicateCluster   gvkFlag
 	replicateNamespace gvkFlag
 	replicatePath      string
@@ -82,12 +83,13 @@ func main() {
 	rootCmd.Flags().StringVarP(&params.podNamespace, "pod-namespace", "", "", "set pod namespace (required for admission registration ownership)")
 	rootCmd.Flags().StringVarP(&params.policyLabel, "policy-label", "", "openpolicyagent.org/policy", "replace label openpolicyagent.org/policy")
 	rootCmd.Flags().StringVarP(&params.policyValue, "policy-value", "", "rego", "replace value rego")
+	rootCmd.Flags().StringVarP(&params.dataLabel, "data-label", "", "openpolicyagent.org/data", "replace label openpolicyagent.org/data")
+	rootCmd.Flags().StringVarP(&params.dataValue, "data-value", "", "opa", "replace value opa")
 
 	// Replication options.
-	rootCmd.Flags().BoolVarP(&params.enablePolicies, "enable-policies", "", true, "whether to automatically discover policies from ConfigMaps")
-	rootCmd.Flags().BoolVarP(&params.enableData, "enable-data", "", false, "whether to automatically discover data from correctly labelled ConfigMaps")
-	rootCmd.Flags().StringSliceVarP(&params.policies, "policies", "", []string{"opa", "kube-federation-scheduling-policy"}, "automatically load policies from these namespaces")
-	rootCmd.Flags().BoolVarP(&params.requirePolicyLabel, "require-policy-label", "", false, "only load policies out of labelled configmaps")
+	rootCmd.Flags().BoolVarP(&params.enablePolicies, "enable-policies", "", true, "whether to automatically discover policies from labelled ConfigMaps")
+	rootCmd.Flags().BoolVarP(&params.enableData, "enable-data", "", true, "whether to automatically discover data from labelled ConfigMaps")
+	rootCmd.Flags().StringSliceVarP(&params.namespaces, "namespaces", "", []string{"opa"}, "namespaces to load policies and data from")
 	rootCmd.Flags().VarP(&params.replicateNamespace, "replicate", "", "replicate namespace-level resources")
 	rootCmd.Flags().VarP(&params.replicateCluster, "replicate-cluster", "", "replicate cluster-level resources")
 	rootCmd.Flags().StringVarP(&params.replicatePath, "replicate-path", "", "kubernetes", "set path to replicate data into")
@@ -163,15 +165,16 @@ func run(params *params) {
 			kubeconfig,
 			opa.New(params.opaURL, params.opaAuth),
 			configmap.DefaultConfigMapMatcher(
-				params.policies,
-				params.requirePolicyLabel,
+				params.namespaces,
 				params.enablePolicies,
 				params.enableData,
 				params.policyLabel,
 				params.policyValue,
+				params.dataLabel,
+				params.dataValue,
 			),
 		)
-		_, err = sync.Run(params.policies)
+		_, err = sync.Run(params.namespaces)
 		if err != nil {
 			logrus.Fatalf("Failed to start configmap sync: %v", err)
 		}

@@ -1,0 +1,13 @@
+useHttps: false
+
+opa: null
+
+authz:
+  enabled: false
+
+mgmt:
+  extraArgs:
+    - "--policy-label=qweqwe/policy"
+    - "--policy-value=111"
+    - "--data-label=asdasd/data"
+    - "--data-value=222"
