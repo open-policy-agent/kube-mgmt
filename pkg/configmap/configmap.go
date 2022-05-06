@@ -64,23 +64,16 @@ func CustomPolicyLabel(key, value string) (string, error) {
 // specified namespaces and/or with a policy or data label. The first bool return
 // value specifies a policy/data match and the second bool indicates if the configmap
 // contains a policy.
-func DefaultConfigMapMatcher(namespaces []string, requirePolicyLabel, enablePolicies, enableData bool, policyLabelKey, policyLabelValue string) func(*v1.ConfigMap) (bool, bool) {
+func DefaultConfigMapMatcher(namespaces []string, enablePolicies, enableData bool, policyLabelKey, policyLabelValue, dataLabelKey, dataLabelValue string) func(*v1.ConfigMap) (bool, bool) {
 	return func(cm *v1.ConfigMap) (bool, bool) {
 		var match, isPolicy bool
 
-		// Check for data label. This label needs to be set on any
-		// configmap that contains JSON data to be loaded into OPA.
 		if enableData {
 			match = matchesNamespace(cm, namespaces) && matchesLabel(cm, dataLabelKey, dataLabelValue)
 		}
 
-		// Check for explicit policy label or match on any policy namespace.
 		if !match && enablePolicies {
-			if requirePolicyLabel {
-				match = matchesNamespace(cm, namespaces) && matchesLabel(cm, policyLabelKey, policyLabelValue)
-			} else {
-				match = matchesNamespace(cm, namespaces) || matchesLabel(cm, policyLabelKey, policyLabelValue)
-			}
+			match = matchesNamespace(cm, namespaces) && matchesLabel(cm, policyLabelKey, policyLabelValue)
 
 			if match {
 				isPolicy = true
