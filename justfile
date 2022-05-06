@@ -21,7 +21,9 @@ _build-latest: build
     docker push $LATEST
 
 @test-go:
-    ./test/go/test.sh
+    go test ./...
+    go vet ./...
+    staticcheck ./...
 
 @test-helm:
     ./test/linter/test.sh
