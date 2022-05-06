@@ -44,3 +44,24 @@ apiVersion: v1
 data:
   exclude.json: |
     {"exKey": "exValue"}
+---
+kind: ConfigMap
+metadata:
+  name: data-labeless
+  labels:
+    kube-mgmt/e2e: "true"
+apiVersion: v1
+data:
+  labeless.json: |
+    {"lbKey": "lbValue"}
+---
+kind: ConfigMap
+metadata:
+  name: policy-labeless
+  labels:
+    kube-mgmt/e2e: "true"
+apiVersion: v1
+data:
+  labeless.rego: |
+    package example.labeless
+    allow := true
