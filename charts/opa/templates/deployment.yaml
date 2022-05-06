@@ -15,14 +15,12 @@ spec:
   {{- end }}
   template:
     metadata:
-{{- if or .Values.generateCerts .Values.opa }}
       annotations:
 {{- if .Values.generateCerts }}
         checksum/certs: {{ include (print $.Template.BasePath "/webhookconfiguration.yaml") . | sha256sum }}
 {{- end }}
 {{- if .Values.opa }}
         checksum/config: {{ include (print $.Template.BasePath "/secrets.yaml") . | sha256sum }}
-{{- end }}
 {{- end }}
 {{- if .Values.annotations }}
 {{ toYaml .Values.annotations | indent 8 }}
