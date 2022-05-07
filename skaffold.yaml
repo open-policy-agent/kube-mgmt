@@ -22,7 +22,7 @@ deploy:
   helm:
     releases:
       - name: kube-mgmt
-        chartPath: charts/opa
+        chartPath: charts/opa-kube-mgmt
         wait: true
         setValues:
           e2e: true

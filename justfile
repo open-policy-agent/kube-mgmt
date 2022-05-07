@@ -22,7 +22,7 @@ build-release:
     docker tag $CURRENT $LATEST
     docker push $LATEST
 
-    helm package charts/opa --version {{VERSION}} --app-version {{VERSION}}
+    helm package charts/opa-kube-mgmt --version {{VERSION}} --app-version {{VERSION}}
 
 test-go:
     go test ./...

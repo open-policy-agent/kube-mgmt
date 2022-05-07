@@ -1,0 +1,19 @@
+apiVersion: v1
+appVersion: 0.0.0 # managed by git tag
+version: 0.0.0 # managed by git tag
+description: Manage OPA in Kubernetes with kube-mgmt sidecar.
+name: opa-kube-mgmt
+keywords:
+  - opa
+  - admission control
+  - policy
+  - kubernetes
+  - security
+home: https://www.openpolicyagent.org
+icon: https://raw.githubusercontent.com/open-policy-agent/opa/master/logo/logo.png
+annotations:
+  artifacthub.io/links: |
+    - name: OPA source code
+      url: https://github.com/open-policy-agent/opa
+    - name: kube-mgmt source code
+      url: https://github.com/open-policy-agent/kube-mgmt
