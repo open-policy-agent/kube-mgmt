@@ -7,7 +7,6 @@ on:
 
 jobs:
   docker_job:
-    name: Docker image
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -15,42 +14,41 @@ jobs:
         with:
           version: 'v1.38.0'
       - uses: extractions/setup-just@v1
-      - name: Calculate release version
+      - name: release version
         id: theVersion
         run: echo "::set-output name=theVersion::$(echo ${GITHUB_REF##*/})"
-      - name: Login to DockerHub
+      - name: login to dockerhub
         uses: docker/login-action@v1
         with:
           username: ${{ secrets.DOCKER_USER }}
           password: ${{ secrets.DOCKER_PASSWORD }}
-      - name: Build docker image
+      - name: build and publish image, create chart archive
         run: |
           just VERSION=${{ steps.theVersion.outputs.theVersion }} build-release
-      - name: Upload Helm artifact
+      - name: upload helm artifact
         uses: actions/upload-artifact@v2
         with:
           name: "helm"
           path: "opa-${{ steps.theVersion.outputs.theVersion }}.tgz"
 
   helm_job:
-    name: Helm chart
     runs-on: ubuntu-latest
     needs: docker_job
     steps:
       - uses: actions/checkout@v2
         with:
           ref: gh-pages
-      - name: Download artifact from build job
+      - name: download helm artifact
         uses: actions/download-artifact@v2
         id: download
         with:
           name: helm
           path: /tmp/helm
-      - name: Update Helm index
+      - name: update helm index
         run: |
           helm repo index /tmp/helm --merge ./charts/index.yaml
           mv -f /tmp/helm/* ./charts
-      - name: Publish index and chart to gh-pages
+      - name: publish index and chart
         uses: actions-js/push@master
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
