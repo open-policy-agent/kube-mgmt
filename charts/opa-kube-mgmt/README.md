@@ -1,37 +1,37 @@
-# OPA
+# Manage OPA in Kubernetes with kube-mgmt sidecar.
 
 [OPA](https://www.openpolicyagent.org) is an open-source general-purpose policy
 engine designed for cloud-native environments.
 
-## Prerequisites
-
-- Kubernetes 1.9 (or newer) for validating and mutating webhook admission
-  controller support.
-- Optional, cert-manager (https://docs.cert-manager.io/en/latest/)
-
 ## Overview
 
-This helm chart installs `OPA` together with `kube-mgmt` 
+This helm chart installs `OPA` together with `kube-mgmt` sidecar, 
 that allows to manage OPA policies and data via Kubernetes ConfigMaps.
 
 Optionally, the chart allows to install a [Kubernetes admission
 controller](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/).
 
-## Kick the tires
+## Installation
 
-If you just want to see something run, install the chart without any
-configuration.
+### Prerequisites
+
+- Kubernetes 1.9 (or newer) for validating and mutating webhook admission
+  controller support.
+- Optional, cert-manager (https://docs.cert-manager.io/en/latest/)
+
+If you just want to see something run, install the chart with default configuration.
 
 ```bash
 helm repo add opa https://open-policy-agent.github.io/kube-mgmt/charts
 helm repo update
-helm upgrade -i -n opa --create-namespace opa opa/opa
+helm upgrade -i -n opa --create-namespace opa opa/opa-kube-mgmt
 ```
 
-Once installed, the OPA will download a sample bundle from
-https://www.openpolicyagent.org. The sample bundle contains a simple policy that
-restricts the hostnames that can be specified on Ingress objects created in the
-`opa-example` namespace. You can download the bundle and inspect it yourself:
+Once installed, the OPA will download a sample bundle from https://www.openpolicyagent.org. 
+It contains a simple policy that restricts the hostnames that can be specified on Ingress objects created in the
+`opa-example` namespace. 
+
+You can download the bundle and inspect it yourself:
 
 ```bash
 mkdir example && cd example
