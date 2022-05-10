@@ -1,7 +1,7 @@
 apiVersion: skaffold/v2beta28
 kind: Config
 metadata:
-  name: opa
+  name: opa-kube-mgmt
 build:
   artifacts:
     - image: openpolicyagent/kube-mgmt
