@@ -116,7 +116,7 @@ hostNetwork:
   enabled: false
 
 # Docker image and tag to deploy.
-image: 
+image:
   repository: openpolicyagent/opa
   tag: 0.40.0
   pullPolicy: IfNotPresent
@@ -129,7 +129,6 @@ imagePullSecrets: []
 useHttps: true
 
 # Port to which the opa pod will bind itself,
-# if useHttps is true - then 443, otherwise 8181 if not provided directly.
 port: 8181
 
 extraArgs: []
@@ -139,10 +138,10 @@ extraEnv: []
 
 mgmt:
   enabled: true
-  image: 
+  image:
     repository: openpolicyagent/kube-mgmt
     tag: null # appVersion is used by default, set to desired value to override
-    pullPolicy: IfNotPresent      
+    pullPolicy: IfNotPresent
   extraArgs: []
   extraEnv: []
   resources: {}
@@ -214,7 +213,7 @@ serviceAccount:
 # Kubernetes API. You can get a rego function at github.com/open-policy-agent/library
 sar:
   enabled: false
-  image: 
+  image:
     repository: lachlanevenson/k8s-kubectl
     tag: latest
     pullPolicy: IfNotPresent

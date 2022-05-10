@@ -27,25 +27,30 @@ webhooks:
     rules:
 {{ toYaml .Values.admissionController.rules | indent 6 }}
     clientConfig:
-{{- if not .Values.certManager.enabled }}
-{{- if .Values.generateCerts }}
+      {{- if .Values.useHttps }}
+      {{- if not .Values.certManager.enabled }}
+      {{- if .Values.generateCerts }}
       caBundle: {{ b64enc $ca.Cert }}
-{{- else }}
+      {{- else }}
       caBundle: {{ b64enc .Values.CA }}
-{{- end }}
-{{- end }}
+      {{- end }}
+      {{- end }}
+      {{- end }}
       service:
         name: {{ template "opa.fullname" . }}
         namespace: {{ .Release.Namespace }}
+        port: {{ .Values.port }}
     sideEffects: {{ .Values.admissionController.sideEffect }}
-{{- if .Values.timeoutSeconds }}
+    {{- if .Values.timeoutSeconds }}
     timeoutSeconds: {{ .Values.timeoutSeconds }}
+    {{- end }}
 {{- end }}
-{{- end }}
----
+
+{{/* HTTP certificates  */}}
+
+{{- if .Values.useHttps }}
 {{- if .Values.certManager.enabled }}
-# Create a selfsigned Issuer, in order to create a root CA certificate for
-# signing webhook serving certificates
+--- {{/* Create a selfsigned Issuer, in order to create a root CA certificate for signing webhook serving certificates */}}
 apiVersion: {{ include "opa.certManagerApiVersion" . }}
 kind: Issuer
 metadata:
@@ -58,8 +63,7 @@ metadata:
 {{ include "opa.labels.standard" . | indent 4 }}
 spec:
   selfSigned: {}
----
-# Generate a CA Certificate used to sign certificates for the webhook
+--- {{/* Generate a CA Certificate used to sign certificates for the webhook */}}
 apiVersion: {{ include "opa.certManagerApiVersion" . }}
 kind: Certificate
 metadata:
@@ -77,8 +81,7 @@ spec:
     name: {{ include "opa.selfSignedIssuer" . }}
   commonName: "ca.webhook.opa"
   isCA: true
----
-# Create an Issuer that uses the above generated CA certificate to issue certs
+--- {{/* Create an Issuer that uses the above generated CA certificate to issue certs */}}
 apiVersion: {{ include "opa.certManagerApiVersion" . }}
 kind: Issuer
 metadata:
@@ -92,8 +95,7 @@ metadata:
 spec:
   ca:
     secretName: {{ include "opa.rootCACertificate" . }}
----
-# Finally, generate a serving certificate for the webhook to use
+--- {{/* Finally, generate a serving certificate for the webhook to use */}}
 apiVersion: {{ include "opa.certManagerApiVersion" . }}
 kind: Certificate
 metadata:
@@ -114,6 +116,7 @@ spec:
   - {{ include "opa.fullname" . }}.{{ .Release.Namespace }}
   - {{ include "opa.fullname" . }}.{{ .Release.Namespace }}.svc
 {{- else }}
+---  {{/* create static secret  */}}
 apiVersion: v1
 kind: Secret
 metadata:
@@ -137,4 +140,4 @@ data:
   tls.key: {{ b64enc .Values.key }}
 {{- end }}
 {{- end }}
-
+{{- end }}

@@ -16,12 +16,12 @@ spec:
   template:
     metadata:
       annotations:
-{{- if .Values.generateCerts }}
+        {{- if and .Values.generateCerts .Values.useHttps }}
         checksum/certs: {{ include (print $.Template.BasePath "/webhookconfiguration.yaml") . | sha256sum }}
-{{- end }}
-{{- if .Values.opa }}
-        checksum/config: {{ include (print $.Template.BasePath "/secrets.yaml") . | sha256sum }}
-{{- end }}
+        {{- end }}
+        {{- if .Values.opa }}
+        checksum/config: {{ include (print $.Template.BasePath "/secret-opa-config.yaml") . | sha256sum }}
+        {{- end }}
 {{- if .Values.annotations }}
 {{ toYaml .Values.annotations | indent 8 }}
 {{- end }}
@@ -92,7 +92,7 @@ spec:
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           env:
-{{- if .Values.extraEnv }}        
+{{- if .Values.extraEnv }}
 {{ toYaml .Values.extraEnv | indent 12 }}
 {{- end }}
           resources:
@@ -100,39 +100,41 @@ spec:
           args:
             - "run"
             - "--server"
-{{- if .Values.opa }}
+            {{- if .Values.opa }}
             - "--config-file=/config/config.yaml"
-{{- end }}
-{{- if .Values.useHttps }}
+            {{- end }}
+            {{- if .Values.useHttps }}
             - "--tls-cert-file=/certs/tls.crt"
             - "--tls-private-key-file=/certs/tls.key"
-{{- end }}
+            {{- end }}
             - "--addr=0.0.0.0:{{ .Values.port }}"
             - "--log-level={{ .Values.logLevel }}"
             - "--log-format={{ .Values.logFormat }}"
-{{- if .Values.authz.enabled }}
+            {{- if .Values.authz.enabled }}
             - "--authentication=token"
             - "--authorization=basic"
             - "--ignore=.*"
-{{- end }}
-{{- if .Values.prometheus.enabled }}
+            {{- end }}
+            {{- if .Values.prometheus.enabled }}
             - "--diagnostic-addr=http://0.0.0.0:{{ .Values.prometheus.port }}"
-{{- end }}
-{{- if or .Values.authz.enabled .Values.bootstrapPolicies }}
+            {{- end }}
+            {{- if or .Values.authz.enabled .Values.bootstrapPolicies }}
             - "/bootstrap"
-{{- end }}
-{{- range .Values.extraArgs }}
-            - {{ . }}
-{{- end }}
+            {{- end }}
+            {{- range .Values.extraArgs }}
+             - {{ . }}
+            {{- end }}
           volumeMounts:
+            {{- if .Values.useHttps }}
             - name: certs
               readOnly: true
               mountPath: /certs
-{{- if .Values.opa }}
+            {{- end }}
+            {{- if .Values.opa }}
             - name: config
               readOnly: true
               mountPath: /config
-{{- end }}
+            {{- end }}
 {{- if or .Values.authz.enabled .Values.bootstrapPolicies }}
             - name: bootstrap
               readOnly: true
@@ -157,7 +159,7 @@ spec:
           image: {{ include "opa.mgmt.image" . }}
           imagePullPolicy: {{ .Values.mgmt.image.pullPolicy }}
           env:
-{{- if .Values.mgmt.extraEnv }}        
+{{- if .Values.mgmt.extraEnv }}
 {{ toYaml .Values.mgmt.extraEnv | indent 12 }}
 {{- end }}
           resources:
@@ -212,14 +214,16 @@ spec:
       {{- end }}
       serviceAccountName: {{ template "opa.serviceAccountName" .}}
       volumes:
+        {{- if .Values.useHttps }}
         - name: certs
           secret:
             secretName: {{ template "opa.fullname" . }}-cert
-{{- if .Values.opa }}
+        {{- end }}
+        {{- if .Values.opa }}
         - name: config
           secret:
             secretName: {{ template "opa.fullname" . }}-config
-{{- end }}
+        {{- end }}
 {{- if or .Values.authz.enabled .Values.bootstrapPolicies}}
         - name: bootstrap
           emptyDir: {}
