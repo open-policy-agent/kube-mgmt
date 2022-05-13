@@ -19,7 +19,7 @@ build-release:
 
 _latest:
   #!/bin/sh
-  if [ $SKAFFOLD_IMAGE_REPO == "openpolicyagent" ]; then
+  if [ "openpolicyagent" == "${SKAFFOLD_IMAGE_REPO}" ]; then
     docker tag ${SKAFFOLD_IMAGE} openpolicyagent/kube-mgmt:latest
     docker push openpolicyagent/kube-mgmt:latest
   fi
