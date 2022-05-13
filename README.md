@@ -42,33 +42,27 @@ Both OPA and `kube-mgmt` can be installed using Helm chart.
     curl $OPA_URL/v1/data/kubernetes/example
     ```
 
-## Policies
+## Policies and Data loading
 
-`kube-mgmt` automatically discovers policies stored in ConfigMaps in Kubernetes
-and loads them into OPA. `kube-mgmt` assumes a ConfigMap contains policies if
-the ConfigMap is:
+`kube-mgmt` automatically discovers policies and JSON data
+stored in `ConfigMaps` in Kubernetes and loads them into OPA.
 
-- Created in a namespace listed in the `--policies` option. If you specify `--policies=*` then `kube-mgmt` will look for policies in ALL namespaces.
-- Labelled with `openpolicyagent.org/policy=rego`.
+Policies or data can be disabled using `--enable-policy=false` or `--enable-data=false` flags respectively. 
 
-When a policy has been successfully loaded into OPA, the
-`openpolicyagent.org/policy-status` annotation is set to `{"status": "ok"}`.
+`kube-mgmt` assumes a `ConfigMap` contains policy or JSON data if the `ConfigMap` is:
+
+- Created in a namespace listed in the `--namespaces` option. If you specify `--namespaces=*` then `kube-mgmt` will look for policies in ALL namespaces.
+- Labelled with `openpolicyagent.org/policy=rego` for policies
+- Labelled with `openpolicyagent.org/data=op` for JSON data
+
+Label names and their values can be configured using `--policy-label`, `--policy-value`, `--data-label`, `--data-value` CLI options.
+
+When a `ConfigMap` has been successfully loaded into OPA,
+the `openpolicyagent.org/policy-status` annotation is set to `{"status": "ok"}`.
 
 If loading fails for some reason (e.g., because of a parse error), the
-`openpolicyagent.org/policy-status` annotation is set to `{"status": "error",
-"error": ...}` where the `error` field contains details about the failure.
-
-### JSON Loading
-
-`kube-mgmt` can be configured to load arbitrary JSON out of ConfigMaps into
-OPA's data namespace. This is useful for providing contextual information to
-your policies.
-
-Enable data loading by specifying the `--enable-data` command-line flag to
-`kube-mgmt`. If data loading is enabled `kube-mgmt` will load JSON out of
-ConfigMaps labelled with `openpolicyagent.org/data=opa`.
-
-> The JSON data ConfigMaps must be in namespaces listed in the `--policies` option.
+`openpolicyagent.org/policy-status` annotation is set to `{"status": "error", "error": ...}`
+where the `error` field contains details about the failure.
 
 Data loaded out of ConfigMaps is laid out as follows:
 
