@@ -4,43 +4,19 @@ Policy-based control for Kubernetes deployments.
 
 ## About
 
-`kube-mgmt` manages instances of the [Open Policy Agent](https://github.com/open-policy-agent/opa) on top of Kubernetes. Use `kube-mgmt` to:
+`kube-mgmt` manages policies / data of [Open Policy Agent](https://github.com/open-policy-agent/opa) 
+instances in Kubernetes.
 
-- Load policies into OPA via Kubernetes (see [Policies](#policies) below.)
-- Replicate Kubernetes resources including [CustomResourceDefinitions (CRDs)](https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/#customresourcedefinitions) into OPA (see [Caching](#caching) below.)
+Use `kube-mgmt` to:
+* Load policies and/or static data into OPA via `ConfigMap`.
+* Replicate Kubernetes resources
+including [CustomResourceDefinitions (CRDs)](https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/#customresourcedefinitions) into OPA.
 
 ## Deployment Guide
 
-Both OPA and `kube-mgmt` can be installed using Helm chart.
+Both `OPA` and `kube-mgmt` can be installed using Helm chart.
 
-1. Follow [instructions](charts/opa/README.md) to install it into K8s cluster.
-
-1. Define a simple policy (`example.rego`) with the following content:
-
-    ```ruby
-    package kubernetes
-
-    example = "Hello, Kubernetes!"
-    ```
-
-1. Create a ConfigMap containing the policy:
-
-    ```bash
-    kubectl -n opa create configmap hello-world --from-file example.rego
-    ```
-
-1. Create a Service to expose OPA:
-
-    ```bash
-    kubectl -n opa expose deployment opa --type=NodePort
-    ```
-
-1. Execute a policy query against OPA:
-
-    ```bash
-    OPA_URL=$(minikube service -n opa opa --url)
-    curl $OPA_URL/v1/data/kubernetes/example
-    ```
+Follow [README](charts/opa-kube-mgmt/README.md) to install it into K8s cluster.
 
 ## Policies and Data loading
 
