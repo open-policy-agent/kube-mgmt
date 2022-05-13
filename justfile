@@ -14,17 +14,15 @@ defaul:
 build-release:
   #!/usr/bin/env bash
   set -euxo pipefail
-  skaffold build -b kube-mgmt -t {{VERSION}} --file-output={{skaffoldTags}}
-
-  cat {{skaffoldTags}}
-
-  # LATEST="$(jq -r .builds[0].imageName {{skaffoldTags}}):latest"
-  # CURRENT="$(jq -r .builds[0].tag {{skaffoldTags}})"
-
-  # docker tag $CURRENT $LATEST
-  # docker push $LATEST
-
+  skaffold build -b kube-mgmt -t {{VERSION}}
   helm package charts/opa-kube-mgmt --version {{VERSION}} --app-version {{VERSION}}
+
+_latest:
+  #!/bin/sh
+  if [ $SKAFFOLD_IMAGE_REPO == "openpolicyagent" ]; then
+    docker tag ${SKAFFOLD_IMAGE} openpolicyagent/kube-mgmt:latest
+    docker push openpolicyagent/kube-mgmt:latest
+  fi
 
 test-go:
   go test ./...

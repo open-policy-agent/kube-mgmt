@@ -17,7 +17,7 @@ build:
       context: .
       hooks:
         after:
-          - command: ["sh", "-c", "env"]
+          - command: ["sh", "-c", "just _latest"]
   local:
     push: true
     useBuildkit: true
