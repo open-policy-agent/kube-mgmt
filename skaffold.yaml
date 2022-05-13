@@ -10,11 +10,14 @@ build:
         main: ./cmd/kube-mgmt/.../
         ldflags:
           - "-X github.com/open-policy-agent/kube-mgmt/pkg/version.Version={{.VERSION}}"
-          - "-X github.com/open-policy-agent/kube-mgmt/pkg/version.Git={{.COMMIT}}" 
+          - "-X github.com/open-policy-agent/kube-mgmt/pkg/version.Git={{.COMMIT}}"
       platforms:
         - "linux/amd64"
         - "linux/arm64"
       context: .
+      hooks:
+        after:
+          - command: ["sh", "-c", "env"]
   local:
     push: true
     useBuildkit: true

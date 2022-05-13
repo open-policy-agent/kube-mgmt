@@ -16,11 +16,13 @@ build-release:
   set -euxo pipefail
   skaffold build -b kube-mgmt -t {{VERSION}} --file-output={{skaffoldTags}}
 
-  LATEST="$(jq -r .builds[0].imageName {{skaffoldTags}}):latest"
-  CURRENT="$(jq -r .builds[0].tag {{skaffoldTags}})"
+  cat {{skaffoldTags}}
 
-  docker tag $CURRENT $LATEST
-  docker push $LATEST
+  # LATEST="$(jq -r .builds[0].imageName {{skaffoldTags}}):latest"
+  # CURRENT="$(jq -r .builds[0].tag {{skaffoldTags}})"
+
+  # docker tag $CURRENT $LATEST
+  # docker push $LATEST
 
   helm package charts/opa-kube-mgmt --version {{VERSION}} --app-version {{VERSION}}
 
