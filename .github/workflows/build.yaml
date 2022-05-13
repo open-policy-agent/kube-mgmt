@@ -6,12 +6,12 @@ on:
       - "docs/**"
       - "logo/**"
       - "examples/**"
-      - "**.md"
-    branches: 
+      - "README.md"
+    branches:
       - "master"
 
   pull_request:
-    branches: 
+    branches:
       - "master"
       - "feat/*"
       - "fix/*"
