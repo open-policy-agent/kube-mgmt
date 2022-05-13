@@ -4,7 +4,7 @@ Policy-based control for Kubernetes deployments.
 
 ## About
 
-`kube-mgmt` manages policies / data of [Open Policy Agent](https://github.com/open-policy-agent/opa) 
+`kube-mgmt` manages policies / data of [Open Policy Agent](https://github.com/open-policy-agent/opa)
 instances in Kubernetes.
 
 Use `kube-mgmt` to:
@@ -23,7 +23,7 @@ Follow [README](charts/opa-kube-mgmt/README.md) to install it into K8s cluster.
 `kube-mgmt` automatically discovers policies and JSON data
 stored in `ConfigMaps` in Kubernetes and loads them into OPA.
 
-Policies or data can be disabled using `--enable-policy=false` or `--enable-data=false` flags respectively. 
+Policies or data can be disabled using `--enable-policy=false` or `--enable-data=false` flags respectively.
 
 `kube-mgmt` assumes a `ConfigMap` contains policy or JSON data if the `ConfigMap` is:
 
@@ -112,16 +112,15 @@ An alternative way to visualize the layout is as single JSON document:
 
 ```
 {
-	"kubernetes": {
-		"services": {
-			"default": {
-				"example-service": {...},
-				"another-service": {...},
-				...
-			},
-			...
-		},
-		...
+  "kubernetes": {
+    "services": {
+      "default": {
+        "example-service": {...},
+          "another-service": {...},
+        }
+      }
+    }
+  }
 }
 ```
 
@@ -170,33 +169,33 @@ default allow = false
 # NOTE: the specific decision differs depending on your policies.
 # NOTE: depending on how callers are configured, they may only require this or the default decision below.
 allow {
-    input.path == ["v0", "data", "example", "response"]
-    input.method == "POST"
+  input.path == ["v0", "data", "example", "response"]
+  input.method == "POST"
 }
 
 # Allow anonymous access to default decision.
 allow {
-    input.path == [""]
-    input.method == "POST"
+  input.path == [""]
+  input.method == "POST"
 }
 
 # This is only used for health check in liveness and readiness probe
 allow {
-    input.path == ["health"]
-    input.method == "GET"
+  input.path == ["health"]
+  input.method == "GET"
 }
 
 # This is only used for prometheus metrics
 allow {
-    input.path == ["metrics"]
-    input.method == "GET"
+  input.path == ["metrics"]
+  input.method == "GET"
 }
 
 # This is used by kube-mgmt to PUT/PATCH against /v1/data and PUT/DELETE against /v1/policies.
 #
 # NOTE: The $TOKEN value is replaced at deploy-time with the actual value that kube-mgmt will use. This is typically done by an initContainer.
 allow {
-    input.identity == "$TOKEN"
+  input.identity == "$TOKEN"
 }
 ```
 
