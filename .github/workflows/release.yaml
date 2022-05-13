@@ -2,7 +2,7 @@ name: Release
 
 on:
   push:
-    tags: 
+    tags:
       - '[0-9]+.[0-9]+.[0-9]+'
 
 jobs:
@@ -10,15 +10,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - uses: volesen/setup-skaffold@v1.1
-        with:
-          version: 'v1.38.0'
-      - uses: extractions/setup-just@v1
       - name: release version
         id: theVersion
         run: echo "::set-output name=theVersion::$(echo ${GITHUB_REF##*/})"
-      - name: login to dockerhub
-        uses: docker/login-action@v1
+      - uses: volesen/setup-skaffold@v1.1
+        with:
+          version: v1.38.0
+      - uses: extractions/setup-just@v1
+      - uses: imjasonh/setup-crane@v0.1
+      - uses: docker/login-action@v1
         with:
           username: ${{ secrets.DOCKER_USER }}
           password: ${{ secrets.DOCKER_PASSWORD }}
