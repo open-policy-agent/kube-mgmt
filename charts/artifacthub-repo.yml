@@ -3,3 +3,5 @@ repositoryID: f9e6f8a1-f4e6-4f81-a770-b0438bc5a67a
 owners:
   - name: Ievgenii Shepeliuk
     email: eshepelyuk@gmail.com
+ignore:
+  - name: opa
