@@ -33,13 +33,11 @@ jobs:
           version: "2021.1.1"
           install-go: false
           cache-key: "1.17.7"
-      - name: setup just
-        uses: extractions/setup-just@v1
+      - uses: extractions/setup-just@v1
       - run: just test
       - uses: rinx/setup-k3d@v0.0.4
         with:
           skipClusterCreation: true
       - run: just k3d
       - run: pip install httpie
-      - name: e2e test
-        run: just test-e2e-all
+      - run: just test-e2e-all
