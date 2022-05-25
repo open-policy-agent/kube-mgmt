@@ -45,19 +45,13 @@ const (
 	syncResetBackoffMax = time.Second * 30
 )
 
-// CustomPolicyLabel allows the default key "openpolicyagent.org/policy"
-// to be replaced by another value. This would allow two instances of kube-mgmt
-// to share a single namepace with config maps for different servers. (ie. validating & mutating)
-func CustomPolicyLabel(key, value string) (string, error) {
+// Label validator
+func CustomLabel(key, value string)  error {
 	_, err := labels.NewRequirement(key, selection.Equals, []string{value})
 	if err != nil {
-		return "", err
+		return err
 	}
-
-	policyLabelKey := key
-	policyLabelValue := value
-	fullLabel := strings.Join([]string{policyLabelKey, policyLabelValue}, "=")
-	return fullLabel, nil
+	return nil
 }
 
 // DefaultConfigMapMatcher returns a function that will match configmaps in
@@ -144,6 +138,8 @@ func (s *Sync) Run(namespaces []string) (chan struct{}, error) {
 	}
 	quit := make(chan struct{})
 
+    logrus.Infof("Policy/data ConfigMap processor connected to K8s: namespaces=%v", namespaces)
+
 	for _, namespace := range namespaces {
 		if namespace == "*" {
 			namespace = v1.NamespaceAll
@@ -153,21 +149,15 @@ func (s *Sync) Run(namespaces []string) (chan struct{}, error) {
 			"configmaps",
 			namespace,
 			fields.Everything())
-		store, controller := cache.NewInformer(
+		_, controller := cache.NewInformer(
 			source,
 			&v1.ConfigMap{},
-			time.Second*60,
+			0,
 			cache.ResourceEventHandlerFuncs{
 				AddFunc:    s.add,
 				UpdateFunc: s.update,
 				DeleteFunc: s.delete,
 			})
-		for _, obj := range store.List() {
-			cm := obj.(*v1.ConfigMap)
-			if match, isPolicy := s.matcher(cm); match {
-				s.syncAdd(cm, isPolicy)
-			}
-		}
 		go controller.Run(quit)
 	}
 	return quit, nil
@@ -175,24 +165,25 @@ func (s *Sync) Run(namespaces []string) (chan struct{}, error) {
 
 func (s *Sync) add(obj interface{}) {
 	cm := obj.(*v1.ConfigMap)
-	if match, isPolicy := s.matcher(cm); match {
+	match, isPolicy := s.matcher(cm)
+	logrus.Debugf("OnAdd cm=%v/%v, match=%v, isPolicy=%v", cm.Namespace, cm.Name, match, isPolicy)
+	if match {
 		s.syncAdd(cm, isPolicy)
 	}
 }
 
 func (s *Sync) update(oldObj, obj interface{}) {
 	oldCm, cm := oldObj.(*v1.ConfigMap), obj.(*v1.ConfigMap)
-	if match, isPolicy := s.matcher(cm); match {
-		// avoid processing new versions of the ConfigMap that don't actually
-		// change policy, data or labels
-		// (issue https://github.com/open-policy-agent/kube-mgmt/issues/131)
+	match, isPolicy := s.matcher(cm)
+	logrus.Debugf("OnUpdate cm=%v/%v, match=%v, isPolicy=%v", cm.Namespace, cm.Name, match, isPolicy)
+	if match {
 		if cm.GetResourceVersion() != oldCm.GetResourceVersion() {
 			fp, oldFp := fingerprint(cm), fingerprint(oldCm)
-			if fp == oldFp {
-				return
+			logrus.Debugf("OnUpdate cm=%v/%v, old fingerprint=%v, new fingeprint=%v", cm.Namespace, cm.Name, fp, oldFp)
+			if fp != oldFp {
+				s.syncAdd(cm, isPolicy)
 			}
 		}
-		s.syncAdd(cm, isPolicy)
 	} else {
 		// check if the label was removed
 		if match, isPolicy := s.matcher(oldCm); match {
@@ -206,12 +197,14 @@ func (s *Sync) delete(obj interface{}) {
 		obj = d.Obj
 	}
 	cm := obj.(*v1.ConfigMap)
+	logrus.Debugf("OnDelete cm=%v/%v", cm.Namespace, cm.Name)
 	if match, isPolicy := s.matcher(cm); match {
 		s.syncRemove(cm, isPolicy)
 	}
 }
 
 func (s *Sync) syncAdd(cm *v1.ConfigMap, isPolicy bool) {
+ 	logrus.Debugf("Attempting to add cm=%v/%v, isPolicy=%v", cm.Namespace, cm.Name, isPolicy)
 	path := fmt.Sprintf("%v/%v", cm.Namespace, cm.Name)
 	// sort keys so that errors, if any, are always in the same order
 	sortedKeys := make([]string, 0, len(cm.Data))
@@ -227,14 +220,16 @@ func (s *Sync) syncAdd(cm *v1.ConfigMap, isPolicy bool) {
 		var err error
 		if isPolicy {
 			err = s.opa.InsertPolicy(id, []byte(value))
+            logrus.Infof("Add policy %v finished, err=%v", id, err)
 		} else {
 			// We don't need to know the JSON structure, just pass it
 			// directly to the OPA data store.
 			var data map[string]interface{}
 			if err = json.Unmarshal([]byte(value), &data); err != nil {
-				logrus.Errorf("Failed to parse JSON data in configmap with id: %s", id)
+				logrus.Errorf("Failed to parse JSON data in configmap with id=%s", id)
 			} else {
 				err = s.opa.PutData(id, data)
+				logrus.Infof("Add data %v finished, err=%v", id, err)
 			}
 		}
 
@@ -255,6 +250,7 @@ func (s *Sync) syncAdd(cm *v1.ConfigMap, isPolicy bool) {
 }
 
 func (s *Sync) syncRemove(cm *v1.ConfigMap, isPolicy bool) {
+ 	logrus.Debugf("Attempting to remove cm=%v/%v, isPolicy=%v", cm.Namespace, cm.Name, isPolicy)
 	path := fmt.Sprintf("%v/%v", cm.Namespace, cm.Name)
 	for key := range cm.Data {
 		id := fmt.Sprintf("%v/%v", path, key)
@@ -310,6 +306,7 @@ func (s *Sync) setStatusAnnotation(cm *v1.ConfigMap, st status, isPolicy bool) {
 }
 
 func (s *Sync) syncReset(id string) {
+ 	logrus.Debugf("Attempting to reset %v", id)
 	d := syncResetBackoffMin
 	for {
 		if err := s.opa.PutData("/", map[string]interface{}{}); err != nil {

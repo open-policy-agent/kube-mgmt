@@ -103,17 +103,12 @@ func TestPolicyFlags(t *testing.T) {
 			rootCmd.SetArgs([]string{"--policy-label=" + tc.flag, "--policy-value=" + tc.value})
 			rootCmd.PersistentPreRunE = func(cmd *cobra.Command, args []string) error {
 				if rootCmd.Flag("policy-label").Value.String() != "" || rootCmd.Flag("policy-value").Value.String() != "" {
-					f, err := configmap.CustomPolicyLabel(params.policyLabel, params.policyValue)
+					err := configmap.CustomLabel(params.policyLabel, params.policyValue)
 					if err != nil {
 						if tc.err.Error() != err.Error() {
 							t.Errorf("exp: %v\ngot: %v\n", tc.err.Error(), err.Error())
 							t.FailNow()
 						}
-					}
-
-					if tc.expectFullFlag != f {
-						t.Errorf("expected: flag:%v got: %v", tc.expectFullFlag, f)
-						t.FailNow()
 					}
 				}
 				return nil
