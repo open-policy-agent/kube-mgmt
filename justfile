@@ -23,16 +23,27 @@ _latest:
     crane tag ${SKAFFOLD_IMAGE} latest
   fi
 
-test-go:
-  go test ./...
+# golang linter
+lint-go:
   go vet ./...
   staticcheck ./...
 
-test-helm-lint:
+# helm linter
+lint-helm:
   ./test/linter/test.sh
 
 # run unit tests
-test: test-go test-helm-lint
+lint: lint-go lint-helm
+
+# stub
+test-helm:
+
+# golang unit tests
+test-go:
+  go test ./...
+
+# run unit tests
+test: test-go test-helm
 
 # (re) create local k8s cluster using k3d
 k3d: && _skaffold-ctx
