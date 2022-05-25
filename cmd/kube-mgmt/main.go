@@ -38,16 +38,17 @@ type params struct {
 	opaAllowInsecure   bool
 	policyLabel        string
 	policyValue        string
-	dataLabel           string
-	dataValue           string
+	dataLabel          string
+	dataValue          string
 	podName            string
 	podNamespace       string
 	enablePolicies     bool
 	enableData         bool
-	namespaces          []string
+	namespaces         []string
 	replicateCluster   gvkFlag
 	replicateNamespace gvkFlag
 	replicatePath      string
+	logLevel           string
 }
 
 func main() {
@@ -81,10 +82,11 @@ func main() {
 	rootCmd.Flags().BoolVarP(&params.opaAllowInsecure, "opa-allow-insecure", "", false, "allow insecure https connections to OPA")
 	rootCmd.Flags().StringVarP(&params.podName, "pod-name", "", "", "set pod name (required for admission registration ownership)")
 	rootCmd.Flags().StringVarP(&params.podNamespace, "pod-namespace", "", "", "set pod namespace (required for admission registration ownership)")
-	rootCmd.Flags().StringVarP(&params.policyLabel, "policy-label", "", "openpolicyagent.org/policy", "replace label openpolicyagent.org/policy")
-	rootCmd.Flags().StringVarP(&params.policyValue, "policy-value", "", "rego", "replace value rego")
-	rootCmd.Flags().StringVarP(&params.dataLabel, "data-label", "", "openpolicyagent.org/data", "replace label openpolicyagent.org/data")
-	rootCmd.Flags().StringVarP(&params.dataValue, "data-value", "", "opa", "replace value opa")
+	rootCmd.Flags().StringVar(&params.policyLabel, "policy-label", "openpolicyagent.org/policy", "label name for filtering ConfigMaps with policies")
+	rootCmd.Flags().StringVar(&params.policyValue, "policy-value", "rego", "label value for filtering ConfigMaps with policies")
+	rootCmd.Flags().StringVar(&params.dataLabel, "data-label", "openpolicyagent.org/data", "label name for filtering ConfigMaps with data")
+	rootCmd.Flags().StringVar(&params.dataValue, "data-value", "opa", "label value for filtering ConfigMaps with data")
+	rootCmd.Flags().StringVar(&params.logLevel, "log-level", "info", "set log level {debug, info, warn}")
 
 	// Replication options.
 	rootCmd.Flags().BoolVarP(&params.enablePolicies, "enable-policies", "", true, "whether to automatically discover policies from labelled ConfigMaps")
@@ -113,7 +115,20 @@ func main() {
 
 func run(params *params) {
 
-	logrus.Warn("First line of log stream.")
+ 	switch params.logLevel {
+ 	case "debug":
+		logrus.SetLevel(logrus.DebugLevel)
+ 	case "info":
+		logrus.SetLevel(logrus.InfoLevel)
+ 	case "warn":
+		logrus.SetLevel(logrus.WarnLevel)
+ 	default:
+		logrus.Fatalf("Invalid log level %v", params.logLevel)
+ 	}
+
+    logrus.Debug("Hello")
+    logrus.Info("Hello")
+    logrus.Warn("Hello")
 
 	kubeconfig, err := loadRESTConfig(params.kubeconfigFile)
 	if err != nil {
