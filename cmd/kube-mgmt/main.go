@@ -93,9 +93,6 @@ func main() {
 	rootCmd.Flags().VarP(&params.replicateNamespace, "replicate", "", "replicate namespace-level resources")
 	rootCmd.Flags().VarP(&params.replicateCluster, "replicate-cluster", "", "replicate cluster-level resources")
 	rootCmd.Flags().StringVarP(&params.replicatePath, "replicate-path", "", "kubernetes", "set path to replicate data into")
-	var replicateResync time.Duration
-	rootCmd.Flags().DurationVar(&replicateResync, "replicate-resync", 60*time.Second, "resend all PUT messages at this interval")
-	rootCmd.Flags().MarkDeprecated("replicate-resync", "not applicable")
 
 	rootCmd.PersistentPreRunE = func(cmd *cobra.Command, args []string) error {
 		if rootCmd.Flag("policy-label").Value.String() != "" || rootCmd.Flag("policy-value").Value.String() != "" {
