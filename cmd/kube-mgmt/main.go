@@ -14,7 +14,6 @@ import (
 	"os"
 	"path"
 	"strings"
-	"time"
 
 	"github.com/open-policy-agent/kube-mgmt/pkg/configmap"
 	"github.com/open-policy-agent/kube-mgmt/pkg/data"
@@ -98,9 +97,15 @@ func main() {
 
 	rootCmd.PersistentPreRunE = func(cmd *cobra.Command, args []string) error {
 		if rootCmd.Flag("policy-label").Value.String() != "" || rootCmd.Flag("policy-value").Value.String() != "" {
-			_, err := configmap.CustomPolicyLabel(params.policyLabel, params.policyValue)
+			err := configmap.CustomLabel(params.policyLabel, params.policyValue)
 			if err != nil {
 				logrus.Fatalf("Invalid --policy-label:%v || --policy-value:%v, %v", params.policyLabel, params.policyValue, err)
+			}
+		}
+		if rootCmd.Flag("data-label").Value.String() != "" || rootCmd.Flag("data-value").Value.String() != "" {
+			err := configmap.CustomLabel(params.dataLabel, params.dataValue)
+			if err != nil {
+				logrus.Fatalf("Invalid --data-label:%v || --data-value:%v, %v", params.dataLabel, params.dataValue, err)
 			}
 		}
 		return nil
@@ -125,10 +130,6 @@ func run(params *params) {
  	default:
 		logrus.Fatalf("Invalid log level %v", params.logLevel)
  	}
-
-    logrus.Debug("Hello")
-    logrus.Info("Hello")
-    logrus.Warn("Hello")
 
 	kubeconfig, err := loadRESTConfig(params.kubeconfigFile)
 	if err != nil {
