@@ -201,6 +201,14 @@ resources: {}
 rbac:
   # If true, create RBAC resources
   create: true
+  rules:
+    cluster:
+    - apiGroups: [""]
+      resources: ["configmaps"]
+      verbs: ["*"]
+    - apiGroups: [""]
+      resources: ["namespaces"]
+      verbs: ["get", "list", "watch"]
 
 serviceAccount:
   # Specifies whether a ServiceAccount should be created
