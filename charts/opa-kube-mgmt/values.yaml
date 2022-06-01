@@ -199,16 +199,13 @@ nodeSelector: {}
 resources: {}
 
 rbac:
-  # If true, create RBAC resources
+  # should ClusterRole for kube-mgmt be created
   create: true
-  rules:
-    cluster:
-    - apiGroups: [""]
-      resources: ["configmaps"]
-      verbs: ["*"]
-    - apiGroups: [""]
-      resources: ["namespaces"]
-      verbs: ["get", "list", "watch"]
+  # extra rules to be added to a ClusterRole
+  extraRules: []
+    # - apiGroups: [""]
+    #   resources: ["configmaps"]
+    #   verbs: ["*"]
 
 serviceAccount:
   # Specifies whether a ServiceAccount should be created

@@ -1,4 +1,5 @@
-{{- if and .Values.rbac.create .Values.mgmt.enabled }}
+{{- if .Values.rbac.create }}
+---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
@@ -10,7 +11,15 @@ metadata:
     component: mgmt
   name: {{ template "opa.mgmtfullname" . }}
 rules:
-{{ toYaml .Values.rbac.rules.cluster | indent 2 }}
+  {{- with .Values.rbac.extraRules }}
+  {{ . | toYaml | nindent 2 }}
+  {{- end }}
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["*"]
+  - apiGroups: [""]
+    resources: ["namespaces"]
+    verbs: ["get", "list", "watch"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
