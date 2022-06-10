@@ -32,7 +32,10 @@ import (
 
 const (
 	statusAnnotationKey = "openpolicyagent.org/kube-mgmt-status"
+<<<<<<< HEAD
 	retriesAnnotationKey = "openpolicyagent.org/kube-mgmt-retries"
+=======
+>>>>>>> c80123be (chore: same status annotation name for data and policies)
 
 	// Special namespace in Kubernetes federation that holds scheduling policies.
 	// commented because staticcheck: 'const kubeFederationSchedulingPolicy is unused (U1000)'
@@ -271,18 +274,13 @@ func (s *Sync) syncRemove(cm *v1.ConfigMap, isPolicy bool) {
 
 func (s *Sync) setAnnotations(cm *v1.ConfigMap, st status, retries int) {
 	bs, err := json.Marshal(st)
-
-	statusAnnotationKey := policyStatusAnnotationKey
-	if !isPolicy {
-		statusAnnotationKey = dataStatusAnnotationKey
-	}
 	if err != nil {
 		logrus.Errorf("Failed to serialize %v for %v/%v: %v", statusAnnotationKey, cm.Namespace, cm.Name, err)
 		return
 	}
 	annotation := string(bs)
 	if cm.Annotations != nil {
-		if existing, ok := cm.Annotations[policyStatusAnnotationKey]; ok {
+		if existing, ok := cm.Annotations[statusAnnotationKey]; ok {
 			if existing == annotation {
 				// If the annotation did not change, do not write it.
 				// (issue https://github.com/open-policy-agent/kube-mgmt/issues/90)
