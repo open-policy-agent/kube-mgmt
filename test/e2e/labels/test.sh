@@ -13,3 +13,9 @@ ${OPA}/data/example/include/allow | jq -e '.result==true'
 
 ${OPA}/data/default | jq -e '.result|keys==["data-include"]'
 ${OPA}/data/default/data-include | jq -e '.result["include.json"].inKey=="inValue"'
+
+kubectl get cm -l qweqwe/policy=111 -ojson | \
+  jq -e '.items[].metadata.annotations["openpolicyagent.org/kube-mgmt-status"]|fromjson|.status=="ok"'
+
+kubectl get cm -l asdasd/data=222 -ojson | \
+  jq -e '.items[].metadata.annotations["openpolicyagent.org/kube-mgmt-status"]|fromjson|.status=="ok"'
