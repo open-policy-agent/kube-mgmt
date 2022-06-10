@@ -12,6 +12,7 @@ import (
 	"sort"
 	"strings"
 	"time"
+	"strconv"
 
 	"github.com/open-policy-agent/kube-mgmt/pkg/opa"
 	"github.com/sirupsen/logrus"
@@ -30,11 +31,8 @@ import (
 )
 
 const (
-	policyStatusAnnotationKey = "openpolicyagent.org/policy-status"
-
-	dataLabelKey            = "openpolicyagent.org/data"
-	dataLabelValue          = "opa"
-	dataStatusAnnotationKey = "openpolicyagent.org/data-status"
+	statusAnnotationKey = "openpolicyagent.org/kube-mgmt-status"
+	retriesAnnotationKey = "openpolicyagent.org/kube-mgmt-retries"
 
 	// Special namespace in Kubernetes federation that holds scheduling policies.
 	// commented because staticcheck: 'const kubeFederationSchedulingPolicy is unused (U1000)'
@@ -204,8 +202,8 @@ func (s *Sync) delete(obj interface{}) {
 }
 
 func (s *Sync) syncAdd(cm *v1.ConfigMap, isPolicy bool) {
- 	logrus.Debugf("Attempting to add cm=%v/%v, isPolicy=%v", cm.Namespace, cm.Name, isPolicy)
 	path := fmt.Sprintf("%v/%v", cm.Namespace, cm.Name)
+	logrus.Debugf("Attempting to add cm=%v, isPolicy=%v", path, isPolicy)
 	// sort keys so that errors, if any, are always in the same order
 	sortedKeys := make([]string, 0, len(cm.Data))
 	for key := range cm.Data {
@@ -216,7 +214,6 @@ func (s *Sync) syncAdd(cm *v1.ConfigMap, isPolicy bool) {
 	for _, key := range sortedKeys {
 		value := cm.Data[key]
 		id := fmt.Sprintf("%v/%v", path, key)
-
 		var err error
 		if isPolicy {
 			err = s.opa.InsertPolicy(id, []byte(value))
@@ -238,14 +235,18 @@ func (s *Sync) syncAdd(cm *v1.ConfigMap, isPolicy bool) {
 		}
 	}
 	if syncErr != nil {
-		s.setStatusAnnotation(cm, status{
+		var retries = 3
+		if cm.Annotations != nil && isPolicy {
+			logrus.Infof("Error loading policies from cm=%v, retries=%v", path, cm.Annotations[retriesAnnotationKey])
+		}
+		s.setAnnotations(cm, status{
 			Status: "error",
 			Error:  syncErr,
-		}, isPolicy)
+		}, retries)
 	} else {
-		s.setStatusAnnotation(cm, status{
+		s.setAnnotations(cm, status{
 			Status: "ok",
-		}, isPolicy)
+		}, 0)
 	}
 }
 
@@ -268,7 +269,7 @@ func (s *Sync) syncRemove(cm *v1.ConfigMap, isPolicy bool) {
 	}
 }
 
-func (s *Sync) setStatusAnnotation(cm *v1.ConfigMap, st status, isPolicy bool) {
+func (s *Sync) setAnnotations(cm *v1.ConfigMap, st status, retries int) {
 	bs, err := json.Marshal(st)
 
 	statusAnnotationKey := policyStatusAnnotationKey
@@ -277,6 +278,7 @@ func (s *Sync) setStatusAnnotation(cm *v1.ConfigMap, st status, isPolicy bool) {
 	}
 	if err != nil {
 		logrus.Errorf("Failed to serialize %v for %v/%v: %v", statusAnnotationKey, cm.Namespace, cm.Name, err)
+		return
 	}
 	annotation := string(bs)
 	if cm.Annotations != nil {
@@ -291,13 +293,15 @@ func (s *Sync) setStatusAnnotation(cm *v1.ConfigMap, st status, isPolicy bool) {
 	patch := map[string]interface{}{
 		"metadata": map[string]interface{}{
 			"annotations": map[string]interface{}{
-				policyStatusAnnotationKey: annotation,
+				statusAnnotationKey: annotation,
+				retriesAnnotationKey: strconv.Itoa(retries),
 			},
 		},
 	}
 	bs, err = json.Marshal(patch)
 	if err != nil {
 		logrus.Errorf("Failed to serialize patch for %v/%v: %v", cm.Namespace, cm.Name, err)
+		return
 	}
 	_, err = s.clientset.CoreV1().ConfigMaps(cm.Namespace).Patch(context.TODO(), cm.Name, types.StrategicMergePatchType, bs, metav1.PatchOptions{})
 	if err != nil {
