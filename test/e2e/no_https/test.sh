@@ -2,7 +2,7 @@
 set -e
 set -x
 
-OPA="http :8080/v1"
+OPA="http --ignore-stdin :8080/v1"
 
 ${OPA}/data | jq -e '.result.default//{}|keys|length==0'
 

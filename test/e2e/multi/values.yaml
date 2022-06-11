@@ -1,0 +1,10 @@
+useHttps: false
+
+opa: null
+
+authz:
+  enabled: false
+
+mgmt:
+  extraArgs:
+    - "--log-level=debug"

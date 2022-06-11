@@ -1,0 +1,19 @@
+---
+kind: ConfigMap
+metadata:
+  name: multi-file-policy
+  labels:
+    kube-mgmt/e2e: "true"
+    openpolicyagent.org/policy: rego
+apiVersion: v1
+data:
+  a.rego: |
+    package my_pkg
+    import data.my_pkg.functions.my_func
+    default my_rule := false
+    my_rule {
+      my_func(input.hello)
+    }
+  b.rego: |
+    package my_pkg.functions
+    my_func(str) := startswith("world", str)

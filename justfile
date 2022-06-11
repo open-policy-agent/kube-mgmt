@@ -50,12 +50,16 @@ k3d: && _skaffold-ctx
   k3d cluster delete kube-mgmt || true
   k3d cluster create --config ./test/e2e/k3d.yaml
 
+rebuild: && build
+  rm -rf {{skaffoldTags}}
+
 # build and publish docker to local registry
 build: _skaffold-ctx
   skaffold build --file-output={{skaffoldTags}} --platform=linux/amd64
 
 # install into local k8s
 up: _skaffold-ctx down
+  kubectl delete cm -l kube-mgmt/e2e=true || true
   skaffold deploy --build-artifacts={{skaffoldTags}}
 
 # remove from local k8s
@@ -64,6 +68,8 @@ down:
 
 # run only e2e test script
 test-e2e-sh:
+  #!/usr/bin/env bash
+  set -euo pipefail
   kubectl delete cm -l kube-mgmt/e2e=true || true
   ./test/e2e/{{E2E_TEST}}/test.sh
 
@@ -73,7 +79,10 @@ test-e2e: up test-e2e-sh
 # run all e2e tests
 test-e2e-all: build
   #!/usr/bin/env bash
-  set -euxo pipefail
-  for E in $(find test/e2e/ -mindepth 1 -maxdepth 1 -type d -printf '%f\n'); do
+  set -euo pipefail
+  for E in $(find test/e2e/ -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort); do
+    echo "================"
+    echo "= Running ${E} "
+    echo "================"
     just E2E_TEST=${E} test-e2e
   done
