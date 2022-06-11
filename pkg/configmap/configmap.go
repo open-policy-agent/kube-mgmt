@@ -31,16 +31,12 @@ import (
 )
 
 const (
+ 	defaultRetries = 2
 	statusAnnotationKey = "openpolicyagent.org/kube-mgmt-status"
-<<<<<<< HEAD
 	retriesAnnotationKey = "openpolicyagent.org/kube-mgmt-retries"
-=======
->>>>>>> c80123be (chore: same status annotation name for data and policies)
-
 	// Special namespace in Kubernetes federation that holds scheduling policies.
 	// commented because staticcheck: 'const kubeFederationSchedulingPolicy is unused (U1000)'
 	// kubeFederationSchedulingPolicy = "kube-federation-scheduling-policy"
-
 	resyncPeriod        = time.Second * 60
 	syncResetBackoffMin = time.Second
 	syncResetBackoffMax = time.Second * 30
@@ -139,8 +135,7 @@ func (s *Sync) Run(namespaces []string) (chan struct{}, error) {
 	}
 	quit := make(chan struct{})
 
-    logrus.Infof("Policy/data ConfigMap processor connected to K8s: namespaces=%v", namespaces)
-
+ 	logrus.Infof("Policy/data ConfigMap processor connected to K8s: namespaces=%v", namespaces)
 	for _, namespace := range namespaces {
 		if namespace == "*" {
 			namespace = v1.NamespaceAll
@@ -166,22 +161,22 @@ func (s *Sync) Run(namespaces []string) (chan struct{}, error) {
 
 func (s *Sync) add(obj interface{}) {
 	cm := obj.(*v1.ConfigMap)
-	match, isPolicy := s.matcher(cm)
-	logrus.Debugf("OnAdd cm=%v/%v, match=%v, isPolicy=%v", cm.Namespace, cm.Name, match, isPolicy)
-	if match {
+	if match, isPolicy := s.matcher(cm); match {
+ 		logrus.Debugf("OnAdd cm=%v/%v, isPolicy=%v", cm.Namespace, cm.Name, isPolicy)
 		s.syncAdd(cm, isPolicy)
 	}
 }
 
 func (s *Sync) update(oldObj, obj interface{}) {
 	oldCm, cm := oldObj.(*v1.ConfigMap), obj.(*v1.ConfigMap)
-	match, isPolicy := s.matcher(cm)
-	logrus.Debugf("OnUpdate cm=%v/%v, match=%v, isPolicy=%v", cm.Namespace, cm.Name, match, isPolicy)
-	if match {
+	if match, isPolicy := s.matcher(cm); match {
+ 		logrus.Debugf("OnUpdate cm=%v/%v, isPolicy=%v, oldVer=%v, newVer=%v",
+ 			cm.Namespace, cm.Name, isPolicy, oldCm.GetResourceVersion(), cm.GetResourceVersion())
 		if cm.GetResourceVersion() != oldCm.GetResourceVersion() {
-			fp, oldFp := fingerprint(cm), fingerprint(oldCm)
-			logrus.Debugf("OnUpdate cm=%v/%v, old fingerprint=%v, new fingeprint=%v", cm.Namespace, cm.Name, fp, oldFp)
-			if fp != oldFp {
+			newFp, oldFp := fingerprint(cm), fingerprint(oldCm)
+ 			rtrVal := cm.Annotations[retriesAnnotationKey]
+			logrus.Debugf("OnUpdate cm=%v/%v, retries=%v, oldFp=%v, newFp=%v", cm.Namespace, cm.Name, rtrVal, oldFp, newFp)
+			if newFp != oldFp || rtrVal != "0" {
 				s.syncAdd(cm, isPolicy)
 			}
 		}
@@ -198,15 +193,15 @@ func (s *Sync) delete(obj interface{}) {
 		obj = d.Obj
 	}
 	cm := obj.(*v1.ConfigMap)
-	logrus.Debugf("OnDelete cm=%v/%v", cm.Namespace, cm.Name)
 	if match, isPolicy := s.matcher(cm); match {
+ 		logrus.Debugf("OnDelete cm=%v/%v", cm.Namespace, cm.Name)
 		s.syncRemove(cm, isPolicy)
 	}
 }
 
 func (s *Sync) syncAdd(cm *v1.ConfigMap, isPolicy bool) {
 	path := fmt.Sprintf("%v/%v", cm.Namespace, cm.Name)
-	logrus.Debugf("Attempting to add cm=%v, isPolicy=%v", path, isPolicy)
+	logrus.Debugf("Adding cm=%v, isPolicy=%v", path, isPolicy)
 	// sort keys so that errors, if any, are always in the same order
 	sortedKeys := make([]string, 0, len(cm.Data))
 	for key := range cm.Data {
@@ -220,7 +215,7 @@ func (s *Sync) syncAdd(cm *v1.ConfigMap, isPolicy bool) {
 		var err error
 		if isPolicy {
 			err = s.opa.InsertPolicy(id, []byte(value))
-            logrus.Infof("Add policy %v finished, err=%v", id, err)
+ 			logrus.Infof("Added policy %v, err=%v", id, err)
 		} else {
 			// We don't need to know the JSON structure, just pass it
 			// directly to the OPA data store.
@@ -229,19 +224,30 @@ func (s *Sync) syncAdd(cm *v1.ConfigMap, isPolicy bool) {
 				logrus.Errorf("Failed to parse JSON data in configmap with id=%s", id)
 			} else {
 				err = s.opa.PutData(id, data)
-				logrus.Infof("Add data %v finished, err=%v", id, err)
+				logrus.Infof("Added data %v, err=%v", id, err)
 			}
 		}
-
 		if err != nil {
 			syncErr = append(syncErr, err)
 		}
 	}
 	if syncErr != nil {
-		var retries = 3
-		if cm.Annotations != nil && isPolicy {
-			logrus.Infof("Error loading policies from cm=%v, retries=%v", path, cm.Annotations[retriesAnnotationKey])
-		}
+ 		var retries int = 0
+ 		if isPolicy {
+ 			if rStr, ok := cm.Annotations[retriesAnnotationKey]; ok {
+ 				r, err := strconv.Atoi(rStr)
+ 				if err == nil && r > 0 {
+ 		 	 	 	retries = r - 1
+ 	 	 	 	 	logrus.Debugf("Adding policies error cm=%v, old retry=%v, new retry=%v", path, rStr, retries)
+                } else if err == nil && r == 0 {
+ 		 	 	 	retries = defaultRetries
+ 	 	 	 	 	logrus.Debugf("Adding policies error cm=%v, old retry=%v, new retry=%v", path, rStr, retries)
+                }
+ 			} else {
+ 				retries = defaultRetries
+ 				logrus.Debugf("Adding policies error cm=%v, no retry annotation, new retry=%v", path, retries)
+ 			}
+ 		}
 		s.setAnnotations(cm, status{
 			Status: "error",
 			Error:  syncErr,
@@ -258,7 +264,6 @@ func (s *Sync) syncRemove(cm *v1.ConfigMap, isPolicy bool) {
 	path := fmt.Sprintf("%v/%v", cm.Namespace, cm.Name)
 	for key := range cm.Data {
 		id := fmt.Sprintf("%v/%v", path, key)
-
 		if isPolicy {
 			if err := s.opa.DeletePolicy(id); err != nil {
 				logrus.Errorf("Failed to delete policy %v: %v", id, err)
@@ -275,23 +280,13 @@ func (s *Sync) syncRemove(cm *v1.ConfigMap, isPolicy bool) {
 func (s *Sync) setAnnotations(cm *v1.ConfigMap, st status, retries int) {
 	bs, err := json.Marshal(st)
 	if err != nil {
-		logrus.Errorf("Failed to serialize %v for %v/%v: %v", statusAnnotationKey, cm.Namespace, cm.Name, err)
+		logrus.Errorf("Failed to serialize status for cm=%v/%v, err=%v", cm.Namespace, cm.Name, err)
 		return
-	}
-	annotation := string(bs)
-	if cm.Annotations != nil {
-		if existing, ok := cm.Annotations[statusAnnotationKey]; ok {
-			if existing == annotation {
-				// If the annotation did not change, do not write it.
-				// (issue https://github.com/open-policy-agent/kube-mgmt/issues/90)
-				return
-			}
-		}
 	}
 	patch := map[string]interface{}{
 		"metadata": map[string]interface{}{
 			"annotations": map[string]interface{}{
-				statusAnnotationKey: annotation,
+				statusAnnotationKey: string(bs),
 				retriesAnnotationKey: strconv.Itoa(retries),
 			},
 		},
