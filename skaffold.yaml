@@ -6,7 +6,7 @@ build:
   artifacts:
     - image: openpolicyagent/kube-mgmt
       ko:
-        fromImage: alpine:3.12.3
+        fromImage: alpine:3.12.12
         main: ./cmd/kube-mgmt/.../
         ldflags:
           - "-X github.com/open-policy-agent/kube-mgmt/pkg/version.Version={{.VERSION}}"
