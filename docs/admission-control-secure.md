@@ -1,6 +1,7 @@
 # Admission Control Secure
 
-In the [Kubernetes Admission Control](http://www.openpolicyagent.org/docs/kubernetes-admission-control.html) tutorial we have seen how OPA can be deployed as an admission controller. In that tutorial, OPA is not configured to `authenticate` and `authorize` client requests.
+In the [Kubernetes Admission Control](http://www.openpolicyagent.org/docs/kubernetes-admission-control.html) tutorial we have seen
+how OPA can be deployed as an admission controller. In that tutorial, OPA is not configured to `authenticate` and `authorize` client requests.
 
 ## Goal
 
@@ -9,7 +10,7 @@ This tutorial will show how to securely deploy OPA as an admission controller. T
 1. Start `OPA` with authentication and authorization enabled using the `--authentication` and `--authorization` options respectively.
 2. Volume mount OPA's startup authorization policy into the OPA container.
 3. Start `kube-mgmt` with `Bearer` token flag using the `--opa-auth-token-file` option.
-4. Configure `kube-mgmt` to load polices stored in ConfigMaps that are created in the `opa` namespace and are labelled `openpolicyagent.org/policy=rego`. This is enforced using the `--require-policy-label=true` option.
+4. Configure `kube-mgmt` to load polices stored in ConfigMaps that are created in the `opa` namespace and are labelled `openpolicyagent.org/policy=rego`.
 5. Configure the Kubernetes API server to use `Bearer` token.
 
 
@@ -21,8 +22,9 @@ Same as the [Kubernetes Admission Control](http://www.openpolicyagent.org/docs/k
 
 ### 1. Configure Kubernetes API server
 
-OPA will `authenticate` clients by extracting the `Bearer` token from the incoming API requests. Hence the Kubernetes API server needs to be configured to send a `Bearer` token in all requests to OPA.
-To do this, the API server must be provided with an admission control configuration file via the `--admission-control-config-file` flag during startup. This means the configuration file should be present inside the minikube VM at a location which is accessible to the API server pod.
+OPA will `authenticate` clients by extracting the `Bearer` token from the incoming API requests. Hence the Kubernetes API server needs to be configured
+to send a `Bearer` token in all requests to OPA. To do this, the API server must be provided with an admission control configuration file via the `--admission-control-config-file`
+flag during startup. This means the configuration file should be present inside the minikube VM at a location which is accessible to the API server pod.
 
 Start minikube:
 
@@ -30,7 +32,8 @@ Start minikube:
 minikube start
 ```
 
-`ssh` into the minikube VM and place the configuration files (**admission-control-config.yaml** and **kube-config.yaml**) below inside `/var/lib/minikube/certs`. This directory is accessible inside the API server pod.
+`ssh` into the minikube VM and place the configuration files (**admission-control-config.yaml** and **kube-config.yaml**) below
+inside `/var/lib/minikube/certs`. This directory is accessible inside the API server pod.
 
 **admission-control-config.yaml**
 
@@ -57,7 +60,8 @@ users:
     token: <apiserver_secret_token>
 ```
 
-With the above configuration, all requests the API server makes to OPA will include a `Bearer` token. You will need to generate the `Bearer` token (`<apiserver_secret_token>`) and later include it in OPA's startup authorization policy so that OPA can verify the identity of the API server.
+With the above configuration, all requests the API server makes to OPA will include a `Bearer` token. You will need to generate the `Bearer`
+token (`<apiserver_secret_token>`) and later include it in OPA's startup authorization policy so that OPA can verify the identity of the API server.
 
 Now exit the minikube VM and stop it:
 
@@ -77,15 +81,17 @@ Make sure that the minikube ingress addon is enabled:
 minikube addons enable ingress
 ```
 
-Follow the steps in the [Kubernetes Admission Control](http://www.openpolicyagent.org/docs/kubernetes-admission-control.html) tutorial to create the `opa` namespace and configure TLS. Now use the **admission-controlller.yaml** file from the tutorial to deploy OPA as an admission controller with the following changes:
+Follow the steps in the [Kubernetes Admission Control](http://www.openpolicyagent.org/docs/kubernetes-admission-control.html) tutorial to create the `opa`
+namespace and configure TLS. Now use the **admission-controller.yaml** file from the tutorial to deploy OPA as an admission controller with the following changes:
 
-1. Use the below `opa` and `kube-mgmt` container spec which enables OPA's security features and configures `kube-mgmt` to include a `Bearer` token in calls to OPA. We also volume mount OPA's startup authorization policy `authz.rego` inside the OPA container in the `/policies` directory.
+1. Use the below `opa` and `kube-mgmt` container spec which enables OPA's security features and configures `kube-mgmt` to include a `Bearer` token
+in calls to OPA. We also volume mount OPA's startup authorization policy `authz.rego` inside the OPA container in the `/policies` directory.
 
 ```yaml
 spec:
   containers:
     - name: opa
-      image: openpolicyagent/opa:0.10.0
+      image: openpolicyagent/opa:0.42.1
       args:
         - "run"
         - "--server"
@@ -105,12 +111,11 @@ spec:
           mountPath: /policies
           name: inject-policy
     - name: kube-mgmt
-      image: openpolicyagent/kube-mgmt:0.8
+      image: openpolicyagent/kube-mgmt:7.0.6
       args:
         - "--replicate-cluster=v1/namespaces"
         - "--replicate=extensions/v1beta1/ingresses"
         - "--opa-auth-token-file=/policies/token"
-        - "--require-policy-label=true"
       volumeMounts:
         - readOnly: true
           mountPath: /policies
@@ -145,10 +150,11 @@ kubectl create secret generic inject-policy -n opa --from-file=authz.rego --from
 
 ```
 
-If you have liveness or readiness probes configured on the OPA server for `/health` you will need to add the following `allow` rule to ensure Kubernetes can still access these endpoints. 
+If you have liveness or readiness probes configured on the OPA server for `/health` you will need to add the following `allow` rule
+to ensure Kubernetes can still access these endpoints.
 
 ```
-# Allow anonymouse access to /health otherwise K8s get 403 and kills pod. 
+# Allow anonymouse access to /health otherwise K8s get 403 and kills pod.
 allow {
     input.path = ["health"]
 }
@@ -191,13 +197,13 @@ data:
     }
 ```
 
-When OPA starts, the `kube-mgmt` container will load Kubernetes Namespace and Ingress objects into OPA. `kube-mgmt` will automatically discover policies stored in ConfigMaps in Kubernetes
-and load them into OPA. `kube-mgmt` assumes a ConfigMap contains policies if
-the ConfigMap is:
+When OPA starts, the `kube-mgmt` container will load Kubernetes Namespace and Ingress objects into OPA. `kube-mgmt` will automatically
+discover policies stored in ConfigMaps in Kubernetes and load them into OPA. `kube-mgmt` assumes a ConfigMap contains policies if the ConfigMap is:
 
-- Created in a namespace listed in the --policies option. Default namespace is `opa`.
+- Created in a namespace listed in the `--namespaces` option. Default namespace is `opa`.
 - Labelled with `openpolicyagent.org/policy=rego`.
 
-`kube-mgmt` is started with the `--opa-auth-token-file` flag and hence all requests made to OPA will include a `Bearer` token (`kube-mgmt` in this case).
+`kube-mgmt` is started with the `--opa-auth-token-file` flag and hence all requests made to OPA will include a `Bearer` token(`kube-mgmt` in this case).
 
-You can now follow the [Kubernetes Admission Control](http://www.openpolicyagent.org/docs/kubernetes-admission-control.html) tutorial to deploy OPA on top of Kubernetes and test admission control. **Make sure to label the ConfigMap when you store a policy inside it.**
+You can now follow the [Kubernetes Admission Control](http://www.openpolicyagent.org/docs/kubernetes-admission-control.html)
+tutorial to deploy OPA on top of Kubernetes and test admission control. **Make sure to label the ConfigMap when you store a policy inside it.**
