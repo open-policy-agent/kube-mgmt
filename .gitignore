@@ -3,4 +3,4 @@ bin
 .go
 *.tgz
 tags.json
-
+.idea
