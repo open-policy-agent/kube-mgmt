@@ -163,7 +163,7 @@ spec:
 {{ toYaml .Values.mgmt.extraEnv | indent 12 }}
 {{- end }}
           resources:
-            {{ toYaml .Values.mgmt.resources | indent 12 }}
+            {{ toYaml .Values.mgmt.resources | nindent 12 }}
           args:
             {{- if .Values.authz.enabled }}
             - --opa-auth-token-file=/bootstrap/mgmt-token
