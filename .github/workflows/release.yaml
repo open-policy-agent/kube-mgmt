@@ -12,7 +12,7 @@ jobs:
       - uses: actions/checkout@v2
       - name: release version
         id: theVersion
-        run: echo "::set-output name=theVersion::$(echo ${GITHUB_REF##*/})"
+        run: echo "theVersion=$(echo ${GITHUB_REF##*/})" >> $GITHUB_OUTPUT
       - uses: volesen/setup-skaffold@v1.1
         with:
           version: v1.38.0
