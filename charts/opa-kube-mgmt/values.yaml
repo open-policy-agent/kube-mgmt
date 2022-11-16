@@ -271,6 +271,11 @@ extraVolumes: []
 #   secret:
 #     secretName: example-app-auth-config
 
+extraVolumeMounts: []
+## Mounting config for using the additional volumes
+#  - name: example-app-auth-config
+#    mountPath: /mount/path
+
 extraPorts: []
 ## Additional ports to the opa services. Useful to expose extra container ports.
 # - port: 11811

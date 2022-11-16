@@ -149,6 +149,9 @@ spec:
               readOnly: true
               mountPath: /bootstrap
 {{- end }}
+{{- if .Values.extraVolumeMounts }}
+{{ toYaml .Values.extraVolumeMounts | indent 12}}
+{{- end }}
           readinessProbe:
             httpGet:
               path: /health
