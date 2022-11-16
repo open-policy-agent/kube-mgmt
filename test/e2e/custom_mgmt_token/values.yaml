@@ -1,0 +1,7 @@
+e2eMgmtTokenSecret: true
+opa:
+  replicas: 2
+authz:
+  enabled: true
+  mgmtToken:
+    secretName: mgmt-token-secret
