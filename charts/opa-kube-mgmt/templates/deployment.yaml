@@ -50,7 +50,11 @@ spec:
           - -c
           - |
 {{- if .Values.authz.enabled }}
+{{- if .Values.authz.mgmtToken}}
+            cat /mgmt-token-secret/mgmt-token > /bootstrap/mgmt-token
+{{- else }}
             tr -dc 'A-F0-9' < /dev/urandom | dd bs=1 count=32 2>/dev/null > /bootstrap/mgmt-token
+{{- end }}
             TOKEN=`cat /bootstrap/mgmt-token`
             cat > /bootstrap/authz.rego <<EOF
             package system.authz
@@ -75,6 +79,11 @@ spec:
           volumeMounts:
             - name: bootstrap
               mountPath: /bootstrap
+{{- if .Values.authz.mgmtToken}}
+            - name: mgmt-token-secret
+              mountPath: /mgmt-token-secret
+              readOnly: true
+{{- end }}
 {{- end }}
 {{- if .Values.hostNetwork.enabled }}
       hostNetwork: true
@@ -227,6 +236,14 @@ spec:
 {{- if or .Values.authz.enabled .Values.bootstrapPolicies}}
         - name: bootstrap
           emptyDir: {}
+{{- if .Values.authz.mgmtToken}}
+        - name: mgmt-token-secret
+          secret:
+            secretName: {{.Values.authz.mgmtToken.secretName}}
+            items:
+              - key: {{ .Values.authz.mgmtToken.secretKey | default "mgmtToken" }}
+                path: mgmt-token
+{{- end }}
 {{- if .Values.extraVolumes }}
 {{ toYaml .Values.extraVolumes | indent 8}}
 {{- end }}

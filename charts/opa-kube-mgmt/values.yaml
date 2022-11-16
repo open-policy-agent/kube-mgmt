@@ -110,6 +110,10 @@ authz:
   # Disable if you don't want authorization.
   # Mostly useful for debugging.
   enabled: true
+  # Used for setting the mgmt token used for authz instead of auto generated default
+  # mgmtToken:
+  #    secretName: name of the secret
+  #    secretKey: (optional) key from the secret - default value is: "mgmtToken"
 
 # Use hostNetwork setting on OPA pod
 hostNetwork:
