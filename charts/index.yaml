@@ -315,6 +315,29 @@ entries:
         - name: kube-mgmt source code
           url: https://github.com/open-policy-agent/kube-mgmt
     apiVersion: v1
+    appVersion: 7.3.0
+    created: "2022-11-29T23:37:27.343119095Z"
+    description: Manage OPA in Kubernetes with kube-mgmt sidecar.
+    digest: e0dbc975542b91b7c53031831f7e4cb69c2403a7463083a3956ac506fb4571c1
+    home: https://www.openpolicyagent.org
+    icon: https://raw.githubusercontent.com/open-policy-agent/opa/master/logo/logo.png
+    keywords:
+    - opa
+    - admission control
+    - policy
+    - kubernetes
+    - security
+    name: opa-kube-mgmt
+    urls:
+    - opa-kube-mgmt-7.3.0.tgz
+    version: 7.3.0
+  - annotations:
+      artifacthub.io/links: |
+        - name: OPA source code
+          url: https://github.com/open-policy-agent/opa
+        - name: kube-mgmt source code
+          url: https://github.com/open-policy-agent/kube-mgmt
+    apiVersion: v1
     appVersion: 7.2.0
     created: "2022-11-29T18:47:41.038496923Z"
     description: Manage OPA in Kubernetes with kube-mgmt sidecar.
@@ -630,4 +653,4 @@ entries:
     urls:
     - opa-kube-mgmt-6.0.0.tgz
     version: 6.0.0
-generated: "2022-11-29T18:47:41.036632688Z"
+generated: "2022-11-29T23:37:27.34169508Z"
