@@ -122,7 +122,7 @@ hostNetwork:
 # Docker image and tag to deploy.
 image:
   repository: openpolicyagent/opa
-  tag: 0.45.0
+  tag: 0.47.3
   pullPolicy: IfNotPresent
 
 # One or more secrets to be used when pulling images
