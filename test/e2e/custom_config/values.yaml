@@ -1,0 +1,9 @@
+opa:
+  services:
+    controller:
+      url: 'https://www.openpolicyagent.org'
+  bundles:
+    quickstart:
+      service: controller
+      resource: /bundles/helm-kubernetes-quickstart
+  default_decision: /helm_kubernetes_quickstart/main

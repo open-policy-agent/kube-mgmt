@@ -31,6 +31,8 @@ jobs:
       - run: |
           go install honnef.co/go/tools/cmd/staticcheck@latest
       - uses: extractions/setup-just@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - run: just lint
       - run: just test
       - uses: rinx/setup-k3d@v0.0.4
@@ -38,4 +40,8 @@ jobs:
           skipClusterCreation: true
       - run: just k3d
       - run: pip install httpie
-      - run: just test-e2e-all
+      # - run: just test-e2e-all
+      - run: |
+          just build
+          env E2E_TEST=default just test-e2e
+          env E2E_TEST=custom_config just test-e2e
