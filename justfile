@@ -84,5 +84,6 @@ test-e2e-all: build
     echo "================"
     echo "= Running ${E} "
     echo "================"
+    kubectl delete deployment.apps/kube-mgmt-opa-kube-mgmt
     just E2E_TEST=${E} test-e2e
   done

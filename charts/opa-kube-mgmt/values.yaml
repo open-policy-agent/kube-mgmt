@@ -1,18 +1,8 @@
 # Default values for opa.
 # -----------------------
 #
-# The 'opa' key embeds an OPA configuration file. See https://www.openpolicyagent.org/docs/configuration.html for more details.
-# Use 'opa: false' to disable the OPA configuration and rely on configmaps for policy loading.
-# See https://www.openpolicyagent.org/docs/latest/kubernetes-admission-control/#3-deploy-opa-on-top-of-kubernetes and the `mgmt.configmapPolicies` section below for more details.
-opa:
-  services:
-    controller:
-      url: 'https://www.openpolicyagent.org'
-  bundles:
-    quickstart:
-      service: controller
-      resource: /bundles/helm-kubernetes-quickstart
-  default_decision: /helm_kubernetes_quickstart/main
+# OPA configuration file. See https://www.openpolicyagent.org/docs/configuration.html for more details.
+opa: {}
 
 # Setup the webhook using cert-manager
 certManager:
