@@ -21,10 +21,12 @@ jobs:
     name: Build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - uses: volesen/setup-skaffold@v1.1
+      - uses: actions/checkout@v3
+      - uses: jaxxstorm/action-install-gh-release@v1
         with:
-          version: v1.38.0
+          repo: GoogleContainerTools/skaffold
+          tag: v1.38.0
+          cache: enable
       - uses: WillAbides/setup-go-faster@v1.7.0
         with:
           go-version: "1.17.7"
@@ -40,8 +42,5 @@ jobs:
           skipClusterCreation: true
       - run: just k3d
       - run: pip install httpie
-      # - run: just test-e2e-all
       - run: |
-          just build
-          env E2E_TEST=default just test-e2e
-          env E2E_TEST=custom_config just test-e2e
+          just test-e2e-all
