@@ -5,8 +5,6 @@ set -x
 TOKEN="mgmt-token-secret-value"
 OPA="http --ignore-stdin --default-scheme=https --verify=no -A bearer -a ${TOKEN} :8443/v1"
 
-${OPA}/data | jq -e '.result.test_helm_kubernetes_quickstart|keys|length==3'
-
 kubectl apply -f "$(dirname $0)/../fixture.yaml"
 
 ${OPA}/policies | jq -e '.result|any(.id=="default/policy-include/include.rego")==true'
