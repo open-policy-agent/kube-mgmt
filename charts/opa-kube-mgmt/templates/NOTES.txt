@@ -1,59 +1,65 @@
-Please wait while the OPA is deployed on your cluster.
+Documentation
 
-For example policies that you can enforce with OPA see https://www.openpolicyagent.org.
+* https://github.com/open-policy-agent/kube-mgmt/blob/master/README.md
 
-If you installed this chart with the default values, you can exercise the sample policy.
+* https://github.com/open-policy-agent/kube-mgmt/blob/master/charts/opa-kube-mgmt/README.md
 
-# 1. Create a namespace called "opa-example"
+{{/* Please wait while the OPA is deployed on your cluster. */}}
 
-kubectl create namespace opa-example
+{{/* For example policies that you can enforce with OPA see https://www.openpolicyagent.org. */}}
 
-# 2. Create an Ingress in the "opa-example" namespace that complies with the policy.
+{{/* If you installed this chart with the default values, you can exercise the sample policy. */}}
 
-cat > ingress-ok.yaml <<EOF
-apiVersion: extensions/v1beta1
-kind: Ingress
-metadata:
-  name: ingress-ok
-spec:
-  rules:
-  - host: signin.dev.acmecorp.com
-    http:
-      paths:
-      - backend:
-          serviceName: nginx
-          servicePort: 80
-EOF
+{{/* # 1. Create a namespace called "opa-example" */}}
 
-kubectl -n opa-example create -f ingress-ok.yaml
+{{/* kubectl create namespace opa-example */}}
 
-# 3. Try to create an Ingress in the "opa-example" namespace that violates the policy.
+{{/* # 2. Create an Ingress in the "opa-example" namespace that complies with the policy. */}}
 
-cat > ingress-bad.yaml <<EOF
-apiVersion: extensions/v1beta1
-kind: Ingress
-metadata:
-  name: ingress-bad
-spec:
-  rules:
-  - host: signin.acmecorp.com
-    http:
-      paths:
-      - backend:
-          serviceName: nginx
-          servicePort: 80
-EOF
+{{/* cat > ingress-ok.yaml <<EOF */}}
+{{/* apiVersion: extensions/v1beta1 */}}
+{{/* kind: Ingress */}}
+{{/* metadata: */}}
+{{/*   name: ingress-ok */}}
+{{/* spec: */}}
+{{/*   rules: */}}
+{{/*   - host: signin.dev.acmecorp.com */}}
+{{/*     http: */}}
+{{/*       paths: */}}
+{{/*       - backend: */}}
+{{/*           serviceName: nginx */}}
+{{/*           servicePort: 80 */}}
+{{/* EOF */}}
 
-kubectl -n opa-example create -f ingress-bad.yaml
+{{/* kubectl -n opa-example create -f ingress-ok.yaml */}}
 
-If you want to turn off authz for debugging purposes, you can do so by upgrading the chart like so:
-helm upgrade {{ .Release.Name }} stable/opa --reuse-values --set authz.enabled=false
+{{/* # 3. Try to create an Ingress in the "opa-example" namespace that violates the policy. */}}
 
-You can query OPA to see the policies it has loaded (you will need to turn off authz as described above):
+{{/* cat > ingress-bad.yaml <<EOF */}}
+{{/* apiVersion: extensions/v1beta1 */}}
+{{/* kind: Ingress */}}
+{{/* metadata: */}}
+{{/*   name: ingress-bad */}}
+{{/* spec: */}}
+{{/*   rules: */}}
+{{/*   - host: signin.acmecorp.com */}}
+{{/*     http: */}}
+{{/*       paths: */}}
+{{/*       - backend: */}}
+{{/*           serviceName: nginx */}}
+{{/*           servicePort: 80 */}}
+{{/* EOF */}}
 
-export OPA_POD_NAME=$(kubectl get pods --namespace {{ .Release.Namespace }} -l "app={{ template "opa.fullname" . }}" -o jsonpath="{.items[0].metadata.name}")
+{{/* kubectl -n opa-example create -f ingress-bad.yaml */}}
 
-kubectl port-forward $OPA_POD_NAME 8080:443 --namespace {{ .Release.Namespace }}
+{{/* If you want to turn off authz for debugging purposes, you can do so by upgrading the chart like so: */}}
+{{/* helm upgrade {{ .Release.Name }} stable/opa --reuse-values --set authz.enabled=false */}}
 
-curl -k -s https://localhost:8080/v1/policies | jq -r '.result[].raw'
+{{/* You can query OPA to see the policies it has loaded (you will need to turn off authz as described above): */}}
+
+{{/* export OPA_POD_NAME=$(kubectl get pods --namespace {{ .Release.Namespace }} -l "app={{ template "opa.fullname" . }}" -o jsonpath="{.items[0].metadata.name}") */}}
+
+{{/* kubectl port-forward $OPA_POD_NAME 8080:443 --namespace {{ .Release.Namespace }} */}}
+
+{{/* curl -k -s https://localhost:8080/v1/policies | jq -r '.result[].raw' */}}
 
