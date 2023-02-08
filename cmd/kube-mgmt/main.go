@@ -44,6 +44,7 @@ type params struct {
 	enablePolicies     bool
 	enableData         bool
 	namespaces         []string
+	ignoreNamespaces   []string
 	replicateCluster   gvkFlag
 	replicateNamespace gvkFlag
 	replicatePath      string
@@ -94,6 +95,7 @@ func main() {
 	rootCmd.Flags().VarP(&params.replicateNamespace, "replicate", "", "replicate namespace-level resources")
 	rootCmd.Flags().VarP(&params.replicateCluster, "replicate-cluster", "", "replicate cluster-level resources")
 	rootCmd.Flags().StringVarP(&params.replicatePath, "replicate-path", "", "kubernetes", "set path to replicate data into")
+	rootCmd.Flags().StringSliceVarP(&params.ignoreNamespaces, "ignore-namespaces", "", []string{"opa"}, "set path to replicate data into")
 
 	rootCmd.PersistentPreRunE = func(cmd *cobra.Command, args []string) error {
 		if rootCmd.Flag("policy-label").Value.String() != "" || rootCmd.Flag("policy-value").Value.String() != "" {
@@ -120,16 +122,16 @@ func main() {
 
 func run(params *params) {
 
- 	switch params.logLevel {
- 	case "debug":
+	switch params.logLevel {
+	case "debug":
 		logrus.SetLevel(logrus.DebugLevel)
- 	case "info":
+	case "info":
 		logrus.SetLevel(logrus.InfoLevel)
- 	case "warn":
+	case "warn":
 		logrus.SetLevel(logrus.WarnLevel)
- 	default:
+	default:
 		logrus.Fatalf("Invalid log level %v", params.logLevel)
- 	}
+	}
 
 	kubeconfig, err := loadRESTConfig(params.kubeconfigFile)
 	if err != nil {
@@ -205,12 +207,12 @@ func run(params *params) {
 
 	for _, gvk := range params.replicateCluster {
 		sync := data.NewFromInterface(client, opa.New(params.opaURL, params.opaAuth).Prefix(params.replicatePath), getResourceType(gvk, false))
-		go sync.RunContext(ctx)
+		go sync.RunContext(ctx, params.ignoreNamespaces)
 	}
 
 	for _, gvk := range params.replicateNamespace {
 		sync := data.NewFromInterface(client, opa.New(params.opaURL, params.opaAuth).Prefix(params.replicatePath), getResourceType(gvk, true))
-		go sync.RunContext(ctx)
+		go sync.RunContext(ctx, params.ignoreNamespaces)
 	}
 	quit := make(chan struct{})
 	<-quit

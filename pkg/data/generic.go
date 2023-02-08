@@ -32,6 +32,7 @@ const (
 	backoffMax   = time.Second * 30
 	backoffMin   = time.Second
 	jitterFactor = 1.2
+	FieldMeta    = "metadata.namespace!="
 )
 
 // GenericSync replicates Kubernetes resources into OPA as raw JSON.
@@ -97,18 +98,19 @@ func (s *GenericSync) Run() (chan struct{}, error) {
 		<-quit
 		cancel()
 	}()
-	go s.RunContext(ctx)
+	var ignoreNamespaces []string
+	go s.RunContext(ctx, ignoreNamespaces)
 	return quit, nil
 }
 
 // RunContext starts the synchronizer in the foreground.
 // To stop the synchronizer, cancel the context.
-func (s *GenericSync) RunContext(ctx context.Context) error {
+func (s *GenericSync) RunContext(ctx context.Context, ignoreNamespaces []string) error {
 	if s.createError != nil {
 		return s.createError
 	}
 
-	store, queue := s.setup(ctx)
+	store, queue := s.setup(ctx, ignoreNamespaces)
 	go func() {
 		<-ctx.Done()
 		queue.ShutDown()
@@ -119,17 +121,21 @@ func (s *GenericSync) RunContext(ctx context.Context) error {
 }
 
 // setup the store and queue for this GenericSync instance
-func (s *GenericSync) setup(ctx context.Context) (cache.SharedInformer, workqueue.DelayingInterface) {
+func (s *GenericSync) setup(ctx context.Context, ignoreNamespaces []string) (cache.SharedInformer, workqueue.DelayingInterface) {
 
 	resource := s.client.ResourceFor(s.ns, metav1.NamespaceAll)
 	queue := workqueue.NewNamedDelayingQueue(s.ns.String())
-
+	var ignoreNs string
+	for _, ns := range ignoreNamespaces {
+		ignoreNs = FieldMeta + ns + "," + ignoreNs
+	}
 	informer := cache.NewSharedIndexInformer(
 		&cache.ListWatch{
 			ListFunc: func(options metav1.ListOptions) (runtime.Object, error) {
 				return resource.List(ctx, options)
 			},
 			WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
+				options.FieldSelector = ignoreNs
 				return resource.Watch(ctx, options)
 			},
 		},
@@ -153,8 +159,6 @@ func (s *GenericSync) setup(ctx context.Context) (cache.SharedInformer, workqueu
 		queue.AddAfter(item, 1*time.Second)
 	}
 
-	stopCh := make(chan struct{})
-	defer close(stopCh)
 	return informer, queue
 }
 
@@ -190,10 +194,30 @@ func (q resourceEventQueue) resourceVersionMatch(oldObj, newObj interface{}) boo
 	return newMeta.GetResourceVersion() == oldMeta.GetResourceVersion()
 }
 
+func (q resourceEventQueue) resourceIsElection(newObj interface{}) bool {
+	var (
+		newMeta metav1.Object
+		err     error
+	)
+	newMeta, err = meta.Accessor(newObj)
+	if err != nil {
+		logrus.Warnf("failed to retrieve meta: %v", err)
+		return false
+	}
+	annotations := newMeta.GetAnnotations()
+	_, ok := annotations["control-plane.alpha.kubernetes.io/leader"]
+
+	return ok
+}
+
 // OnUpdate implements ResourceHandler
 func (q resourceEventQueue) OnUpdate(oldObj, newObj interface{}) {
 	if !q.resourceVersionMatch(oldObj, newObj) { // Avoid sync flood on relist. We don't use resync.
-		q.OnAdd(newObj)
+		if !q.resourceIsElection(newObj) {
+			whatisthis, _ := meta.Accessor(oldObj)
+			q.OnAdd(newObj)
+			logrus.Infof("added que %s", whatisthis.GetName())
+		}
 	}
 }
 
@@ -287,7 +311,7 @@ func (s *GenericSync) syncAll(objs []interface{}) error {
 	if err != nil {
 		return err
 	}
-	
+
 	return s.opa.PutData("/", payload)
 }
 
