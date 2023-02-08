@@ -287,13 +287,8 @@ func (s *GenericSync) syncAll(objs []interface{}) error {
 	if err != nil {
 		return err
 	}
-
-	err = s.opa.PutData("/", payload)
-
-	if err != nil {
-		logrus.Errorf("%s", err)
-	}
-	return err
+	
+	return s.opa.PutData("/", payload)
 }
 
 func generateSyncPayload(objs []interface{}, namespaced bool) (map[string]interface{}, error) {
