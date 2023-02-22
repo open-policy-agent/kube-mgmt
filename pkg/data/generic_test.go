@@ -627,7 +627,8 @@ func (tc *testCase) Play(t *testing.T, client dynamicClient, play expect.Script)
 			tc.ResourceType,
 			WithBackoff(0, 5*time.Second, 0),
 		)
-		sync.RunContext(ctx)
+		ignoreNamespace := []string{"opa"}
+		sync.RunContext(ctx, ignoreNamespace)
 	})
 }
 
