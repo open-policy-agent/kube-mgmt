@@ -132,6 +132,7 @@ func (s *GenericSync) setup(ctx context.Context, ignoreNamespaces []string) (cac
 	informer := cache.NewSharedIndexInformer(
 		&cache.ListWatch{
 			ListFunc: func(options metav1.ListOptions) (runtime.Object, error) {
+				options.FieldSelector = ignoreNs
 				return resource.List(ctx, options)
 			},
 			WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
