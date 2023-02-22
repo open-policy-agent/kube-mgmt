@@ -126,9 +126,14 @@ func (s *GenericSync) setup(ctx context.Context, ignoreNamespaces []string) (cac
 	resource := s.client.ResourceFor(s.ns, metav1.NamespaceAll)
 	queue := workqueue.NewNamedDelayingQueue(s.ns.String())
 	var ignoreNs string
-	for _, ns := range ignoreNamespaces {
-		ignoreNs = FieldMeta + ns + "," + ignoreNs
+	if len(ignoreNamespaces) >= 1 {
+		for _, ns := range ignoreNamespaces {
+			ignoreNs = FieldMeta + ns + "," + ignoreNs
+		}
 	}
+
+	ignoreNs = strings.TrimSuffix(ignoreNs, ",")
+
 	informer := cache.NewSharedIndexInformer(
 		&cache.ListWatch{
 			ListFunc: func(options metav1.ListOptions) (runtime.Object, error) {
@@ -175,6 +180,8 @@ func (q resourceEventQueue) OnAdd(obj interface{}) {
 		logrus.Warnf("failed to retrieve key: %v", err)
 		return
 	}
+	whatisthis, _ := meta.Accessor(obj)
+	logrus.Infof("added que %s", whatisthis.GetName())
 	q.Add(key)
 }
 
@@ -215,9 +222,7 @@ func (q resourceEventQueue) resourceIsElection(newObj interface{}) bool {
 func (q resourceEventQueue) OnUpdate(oldObj, newObj interface{}) {
 	if !q.resourceVersionMatch(oldObj, newObj) { // Avoid sync flood on relist. We don't use resync.
 		if !q.resourceIsElection(newObj) {
-			whatisthis, _ := meta.Accessor(oldObj)
 			q.OnAdd(newObj)
-			logrus.Infof("added que %s", whatisthis.GetName())
 		}
 	}
 }
@@ -260,6 +265,7 @@ func (s *GenericSync) loop(store cache.SharedInformer, queue workqueue.DelayingI
 			if key == initPath && syncDone {
 				s.limiter.Forget(initPath)
 			}
+			logrus.Debugf("queue length: %d", queue.Len())
 			queue.Done(key)
 		}
 
