@@ -32,16 +32,18 @@ const (
 	backoffMax   = time.Second * 30
 	backoffMin   = time.Second
 	jitterFactor = 1.2
+	FieldMeta    = "metadata.namespace!="
 )
 
 // GenericSync replicates Kubernetes resources into OPA as raw JSON.
 type GenericSync struct {
-	createError  error // to support deprecated calls to New / Run
-	client       dynamicClient
-	opa          opa_client.Data
-	ns           types.ResourceType
-	limiter      workqueue.RateLimiter
-	jitterFactor float64
+	createError      error // to support deprecated calls to New / Run
+	client           dynamicClient
+	opa              opa_client.Data
+	ns               types.ResourceType
+	limiter          workqueue.RateLimiter
+	jitterFactor     float64
+	ignoreNamespaces []string
 }
 
 // New returns a new GenericSync that can be started.
@@ -73,7 +75,14 @@ func NewFromInterface(client dynamic.Interface, opa opa_client.Data, ns types.Re
 	return s
 }
 
-//WithBackoff tunes the values of exponential backoff and jitter factor
+// WithIgnoreRelicas provides a list of namespaces to ignore
+func WithIgnoreRelicas(ignoreNamespaces []string) Option {
+	return func(s *GenericSync) {
+		s.ignoreNamespaces = ignoreNamespaces
+	}
+}
+
+// WithBackoff tunes the values of exponential backoff and jitter factor
 func WithBackoff(min, max time.Duration, jitterFactor float64) Option {
 	return func(s *GenericSync) {
 		s.limiter = workqueue.NewItemExponentialFailureRateLimiter(min, max)
@@ -120,15 +129,18 @@ func (s *GenericSync) RunContext(ctx context.Context) error {
 
 // setup the store and queue for this GenericSync instance
 func (s *GenericSync) setup(ctx context.Context) (cache.Store, workqueue.DelayingInterface) {
+	ignoreNs := s.ignoreNs()
 
 	resource := s.client.ResourceFor(s.ns, metav1.NamespaceAll)
 	queue := workqueue.NewNamedDelayingQueue(s.ns.String())
 	store, controller := cache.NewInformer(
 		&cache.ListWatch{
 			ListFunc: func(options metav1.ListOptions) (runtime.Object, error) {
+				options.FieldSelector = ignoreNs
 				return resource.List(ctx, options)
 			},
 			WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
+				options.FieldSelector = ignoreNs
 				return resource.Watch(ctx, options)
 			},
 		},
@@ -147,6 +159,17 @@ func (s *GenericSync) setup(ctx context.Context) (cache.Store, workqueue.Delayin
 	}
 
 	return store, queue
+}
+
+func (s *GenericSync) ignoreNs() string {
+	var ignoreNs string
+	if len(s.ignoreNamespaces) >= 1 {
+		for _, ns := range s.ignoreNamespaces {
+			ignoreNs = FieldMeta + ns + "," + ignoreNs
+		}
+	}
+	ignoreNs = strings.TrimSuffix(ignoreNs, ",")
+	return ignoreNs
 }
 
 // resourceEventQueue is a cache.ResourceEventHandler that queues all events

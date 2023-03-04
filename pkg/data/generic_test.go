@@ -817,3 +817,46 @@ func mustAccess(t *testing.T, obj runtime.Object) metav1.Object {
 	}
 	return m
 }
+
+func TestGenericSync_ignoreNs(t *testing.T) {
+	type fields struct {
+		ignoreNamespaces []string
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		want   string
+	}{
+		{
+			name: "empty fields",
+			fields: fields{
+				[]string{},
+			},
+			want: "",
+		},
+		{
+			name: "one field",
+			fields: fields{
+				[]string{"cluster-autosscaler"},
+			},
+			want: "metadata.namespace!=cluster-autosscaler",
+		},
+		{
+			name: "two fields",
+			fields: fields{
+				[]string{"cluster-autoscaler", "cluster-manager"},
+			},
+			want: "metadata.namespace!=cluster-manager,metadata.namespace!=cluster-autoscaler",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := &GenericSync{
+				ignoreNamespaces: tt.fields.ignoreNamespaces,
+			}
+			if got := s.ignoreNs(); got != tt.want {
+				t.Errorf("GenericSync.ignoreNs() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
