@@ -48,6 +48,7 @@ type params struct {
 	replicateNamespace gvkFlag
 	replicatePath      string
 	logLevel           string
+	replicateIgnoreNs  []string
 }
 
 func main() {
@@ -94,6 +95,7 @@ func main() {
 	rootCmd.Flags().VarP(&params.replicateNamespace, "replicate", "", "replicate namespace-level resources")
 	rootCmd.Flags().VarP(&params.replicateCluster, "replicate-cluster", "", "replicate cluster-level resources")
 	rootCmd.Flags().StringVarP(&params.replicatePath, "replicate-path", "", "kubernetes", "set path to replicate data into")
+	rootCmd.Flags().StringSliceVarP(&params.replicateIgnoreNs, "ignore-namespaces", "", []string{"opa"}, "namespaces that are ignored by replication")
 
 	rootCmd.PersistentPreRunE = func(cmd *cobra.Command, args []string) error {
 		if rootCmd.Flag("policy-label").Value.String() != "" || rootCmd.Flag("policy-value").Value.String() != "" {
@@ -120,16 +122,16 @@ func main() {
 
 func run(params *params) {
 
- 	switch params.logLevel {
- 	case "debug":
+	switch params.logLevel {
+	case "debug":
 		logrus.SetLevel(logrus.DebugLevel)
- 	case "info":
+	case "info":
 		logrus.SetLevel(logrus.InfoLevel)
- 	case "warn":
+	case "warn":
 		logrus.SetLevel(logrus.WarnLevel)
- 	default:
+	default:
 		logrus.Fatalf("Invalid log level %v", params.logLevel)
- 	}
+	}
 
 	kubeconfig, err := loadRESTConfig(params.kubeconfigFile)
 	if err != nil {
@@ -203,13 +205,15 @@ func run(params *params) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
+	opts := data.WithIgnoreRelicas(params.replicateIgnoreNs)
+
 	for _, gvk := range params.replicateCluster {
-		sync := data.NewFromInterface(client, opa.New(params.opaURL, params.opaAuth).Prefix(params.replicatePath), getResourceType(gvk, false))
+		sync := data.NewFromInterface(client, opa.New(params.opaURL, params.opaAuth).Prefix(params.replicatePath), getResourceType(gvk, false), opts)
 		go sync.RunContext(ctx)
 	}
 
 	for _, gvk := range params.replicateNamespace {
-		sync := data.NewFromInterface(client, opa.New(params.opaURL, params.opaAuth).Prefix(params.replicatePath), getResourceType(gvk, true))
+		sync := data.NewFromInterface(client, opa.New(params.opaURL, params.opaAuth).Prefix(params.replicatePath), getResourceType(gvk, true), opts)
 		go sync.RunContext(ctx)
 	}
 	quit := make(chan struct{})
