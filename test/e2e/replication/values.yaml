@@ -1,0 +1,4 @@
+mgmt:
+  extraArgs:
+    - "--log-level=debug"
+    - "--replicate=v1/configmaps"

@@ -1,0 +1,32 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  labels:
+    kubernetes.io/metadata.name: ignore-me
+  name: ignore-me
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  labels:
+    kubernetes.io/metadata.name: dont-ignore-me
+  name: dont-ignore-me
+---
+kind: ConfigMap
+metadata:
+  name: dont-ignore-me
+  namespace: dont-ignore-me
+apiVersion: v1
+data:
+  values.yaml: |
+    app:
+      version: 12345
+---
+kind: ConfigMap
+metadata:
+  name: ignore-me-leader-election
+  annotations:
+    control-plane.alpha.kubernetes.io/leader: '{"holderIdentity":"leader-election-dcf5bffb4-ggrhz","leaseDurationSeconds":60,"acquireTime":"2023-03-02T16:27:24Z","renewTime":"2023-03-04T02:10:06Z","leaderTransitions":211}'
+  namespace: ignore-me
+apiVersion: v1
