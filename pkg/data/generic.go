@@ -75,8 +75,8 @@ func NewFromInterface(client dynamic.Interface, opa opa_client.Data, ns types.Re
 	return s
 }
 
-// WithIgnoreRelicas provides a list of namespaces to ignore
-func WithIgnoreRelicas(ignoreNamespaces []string) Option {
+// WithIgnoreNamespaces provides a list of namespaces to ignore
+func WithIgnoreNamespaces(ignoreNamespaces []string) Option {
 	return func(s *GenericSync) {
 		s.ignoreNamespaces = ignoreNamespaces
 	}

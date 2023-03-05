@@ -95,7 +95,7 @@ func main() {
 	rootCmd.Flags().VarP(&params.replicateNamespace, "replicate", "", "replicate namespace-level resources")
 	rootCmd.Flags().VarP(&params.replicateCluster, "replicate-cluster", "", "replicate cluster-level resources")
 	rootCmd.Flags().StringVarP(&params.replicatePath, "replicate-path", "", "kubernetes", "set path to replicate data into")
-	rootCmd.Flags().StringSliceVarP(&params.replicateIgnoreNs, "ignore-namespaces", "", []string{"opa"}, "namespaces that are ignored by replication")
+	rootCmd.Flags().StringSliceVarP(&params.replicateIgnoreNs, "replicate-ignore-namespaces", "", []string{""}, "namespaces that are ignored by replication")
 
 	rootCmd.PersistentPreRunE = func(cmd *cobra.Command, args []string) error {
 		if rootCmd.Flag("policy-label").Value.String() != "" || rootCmd.Flag("policy-value").Value.String() != "" {
@@ -205,7 +205,7 @@ func run(params *params) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	opts := data.WithIgnoreRelicas(params.replicateIgnoreNs)
+	opts := data.WithIgnoreNamespaces(params.replicateIgnoreNs)
 
 	for _, gvk := range params.replicateCluster {
 		sync := data.NewFromInterface(client, opa.New(params.opaURL, params.opaAuth).Prefix(params.replicatePath), getResourceType(gvk, false), opts)

@@ -1,0 +1,5 @@
+mgmt:
+  extraArgs:
+    - "--log-level=debug"
+    - "--replicate=v1/configmaps"
+    - "--replicate-ignore-namespaces=ignore-me"
