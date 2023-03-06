@@ -8,4 +8,4 @@ kubectl apply -f "$(dirname $0)/../fixture-replication.yaml"
 
 ${OPA}/data/kubernetes/configmaps/ignore-me  | jq -e '.result|length==0'
 
-${OPA}/data/kubernetes/configmaps/dont-ignore-me  | jq -e '.result|length>=0'
+${OPA}/data/kubernetes/configmaps/dont-ignore-me  | jq -e '.result|length>=1'
