@@ -1,5 +1,12 @@
 mgmt:
   extraArgs:
-    - "--log-level=debug"
-    - "--replicate=v1/configmaps"
     - "--replicate-ignore-namespaces=ignore-me"
+  replicate:
+    namespace:
+      - v1/configmaps
+rbac:
+  create: true
+  extraRules:
+    - apiGroups: [""]
+      resources: ["configmaps"]
+      verbs: ["*"]
