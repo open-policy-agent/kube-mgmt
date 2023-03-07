@@ -6,7 +6,7 @@ OPA="http --ignore-stdin --default-scheme=https --verify=no -A bearer -a ${TOKEN
 
 kubectl apply -f "$(dirname $0)/../fixture-replication.yaml"
 
-# we are replicating all here so this should return data
-${OPA}/data/kubernetes/configmaps/ignore-me  | jq -e '.result|length>=1'
+# Due to a default configmap in each namespace you will find 2 `kube-root-ca.crt`
+${OPA}/data/kubernetes/configmaps/ignore-me  | jq -e '.result|length==2'
 
-${OPA}/data/kubernetes/configmaps/dont-ignore-me  | jq -e '.result|length>=1'
+${OPA}/data/kubernetes/configmaps/dont-ignore-me  | jq -e '.result|length==2'
