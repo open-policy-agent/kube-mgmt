@@ -826,6 +826,7 @@ func TestGenericSync_ignoreNs(t *testing.T) {
 		name   string
 		fields fields
 		want   string
+		ns     types.ResourceType
 	}{
 		{
 			name: "empty fields",
@@ -833,6 +834,15 @@ func TestGenericSync_ignoreNs(t *testing.T) {
 				[]string{},
 			},
 			want: "",
+			ns:   types.ResourceType{Namespaced: true},
+		},
+		{
+			name: "one field",
+			fields: fields{
+				[]string{"cluster-autosscaler"},
+			},
+			want: "",
+			ns:   types.ResourceType{Namespaced: false},
 		},
 		{
 			name: "one field",
@@ -840,6 +850,7 @@ func TestGenericSync_ignoreNs(t *testing.T) {
 				[]string{"cluster-autosscaler"},
 			},
 			want: "metadata.namespace!=cluster-autosscaler",
+			ns:   types.ResourceType{Namespaced: true},
 		},
 		{
 			name: "two fields",
@@ -847,12 +858,14 @@ func TestGenericSync_ignoreNs(t *testing.T) {
 				[]string{"cluster-autoscaler", "cluster-manager"},
 			},
 			want: "metadata.namespace!=cluster-manager,metadata.namespace!=cluster-autoscaler",
+			ns:   types.ResourceType{Namespaced: true},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := &GenericSync{
 				ignoreNamespaces: tt.fields.ignoreNamespaces,
+				ns:               tt.ns,
 			}
 			if got := s.ignoreNs(); got != tt.want {
 				t.Errorf("GenericSync.ignoreNs() = %v, want %v", got, tt.want)
