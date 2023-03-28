@@ -163,6 +163,9 @@ func (s *GenericSync) setup(ctx context.Context) (cache.Store, workqueue.Delayin
 
 func (s *GenericSync) ignoreNs() string {
 	var ignoreNs string
+	if !s.ns.Namespaced {
+		return ignoreNs
+	}
 	if len(s.ignoreNamespaces) >= 1 {
 		for _, ns := range s.ignoreNamespaces {
 			ignoreNs = FieldMeta + ns + "," + ignoreNs
