@@ -18,7 +18,7 @@ metadata:
   {{- end }}
 spec:
   endpoints:
-  - port: http
+  - port: diag
     interval: {{ .Values.serviceMonitor.interval }}
   jobLabel: {{ template "opa.fullname" . }}
   namespaceSelector:
