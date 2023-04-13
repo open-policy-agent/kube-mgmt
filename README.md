@@ -27,7 +27,7 @@ Policies or data can be disabled using `--enable-policy=false` or `--enable-data
 
 `kube-mgmt` assumes a `ConfigMap` contains policy or JSON data if the `ConfigMap` is:
 
-- Created in a namespace listed in the `--policies` option. If you specify `--policies=*` then `kube-mgmt` will look for policies in ALL namespaces.
+- Created in a namespace listed in the `--namespaces` option. If you specify `--namespaces=*` then `kube-mgmt` will look for policies in ALL namespaces.
 - Labelled with `openpolicyagent.org/policy=rego` for policies
 - Labelled with `openpolicyagent.org/data=op` for JSON data
 
