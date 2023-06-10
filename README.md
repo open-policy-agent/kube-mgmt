@@ -34,10 +34,10 @@ Policies or data can be disabled using `--enable-policy=false` or `--enable-data
 Label names and their values can be configured using `--policy-label`, `--policy-value`, `--data-label`, `--data-value` CLI options.
 
 When a `ConfigMap` has been successfully loaded into OPA,
-the `openpolicyagent.org/policy-status` annotation is set to `{"status": "ok"}`.
+the `openpolicyagent.org/kube-mgmt-status` annotation is set to `{"status": "ok"}`.
 
 If loading fails for some reason (e.g., because of a parse error), the
-`openpolicyagent.org/policy-status` annotation is set to `{"status": "error", "error": ...}`
+`openpolicyagent.org/kube-mgmt-status` annotation is set to `{"status": "error", "error": ...}`
 where the `error` field contains details about the failure.
 
 Data loaded out of ConfigMaps is laid out as follows:
