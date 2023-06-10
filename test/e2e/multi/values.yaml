@@ -6,5 +6,8 @@ authz:
   enabled: false
 
 mgmt:
+  startupProbe:
+    httpGet:
+      scheme: HTTP
   extraArgs:
     - "--log-level=debug"
