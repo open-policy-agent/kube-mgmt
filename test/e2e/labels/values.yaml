@@ -6,6 +6,9 @@ authz:
   enabled: false
 
 mgmt:
+  startupProbe:
+    httpGet:
+      scheme: HTTP
   extraArgs:
     - "--policy-label=qweqwe/policy"
     - "--policy-value=111"

@@ -170,6 +170,8 @@ spec:
         - name: mgmt
           image: {{ include "opa.mgmt.image" . }}
           imagePullPolicy: {{ .Values.mgmt.image.pullPolicy }}
+          startupProbe:
+{{ toYaml .Values.mgmt.startupProbe | nindent 12 }}
           env:
 {{- if .Values.mgmt.extraEnv }}
 {{ toYaml .Values.mgmt.extraEnv | indent 12 }}

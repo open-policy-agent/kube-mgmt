@@ -4,3 +4,8 @@ opa: null
 
 authz:
   enabled: false
+
+mgmt:
+  startupProbe:
+    httpGet:
+      scheme: HTTP
