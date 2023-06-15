@@ -1,5 +1,4 @@
 name: Build
-
 on:
   push:
     paths-ignore:
@@ -9,27 +8,17 @@ on:
       - "README.md"
     branches:
       - "master"
-
   pull_request:
     branches:
       - "master"
       - "feat/*"
       - "fix/*"
-
 jobs:
   build_job:
     name: Build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - uses: jaxxstorm/action-install-gh-release@v1
-        with:
-          repo: GoogleContainerTools/skaffold
-          tag: v1.38.0
-          cache: enable
-          extension-matching: disable
-          rename-to: skaffold
-          chmod: 0755
       - uses: WillAbides/setup-go-faster@v1.7.0
         with:
           go-version: "1.17.7"
@@ -38,11 +27,18 @@ jobs:
       - uses: extractions/setup-just@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - run: just lint
       - run: just test
       - uses: rinx/setup-k3d@v0.0.4
         with:
           skipClusterCreation: true
+      - uses: jaxxstorm/action-install-gh-release@v1
+        with:
+          repo: GoogleContainerTools/skaffold
+          tag: v1.38.0
+          cache: enable
+          extension-matching: disable
+          rename-to: skaffold
+          chmod: 0755
       - run: just k3d
       - run: pip install httpie
       - run: |
@@ -50,17 +46,12 @@ jobs:
       - name: failure logs
         if: ${{ failure() }}
         run: |
-          echo "------------------------------------------------------------------------------------------------------------------"
-          kubectl get all -A
-          echo "------------------------------------------------------------------------------------------------------------------"
-          # CHART=$(basename `pwd`)
-          # for NS in $(kubectl get ns --no-headers -o custom-columns=:metadata.name); do
-          #   echo "Namespace: ${NS}"
-          #   echo "------------------------------------------------------------------------------------------------------------------"
-          #   kubectl logs -l app.kubernetes.io/name=${CHART} -n ${NS} --tail=-1
-          #   echo "------------------------------------------------------------------------------------------------------------------"
-          #   echo ""
-          # done
-          # echo "------------------------------------------------------------------------------------------------------------------"
-          # kubectl describe po $CHART || true
-          # echo "------------------------------------------------------------------------------------------------------------------"
+          echo "---------------------------------------"
+          kubectl get all
+          echo "---------------------------------------"
+          kubectl describe po kube-mgmt-opa-kube-mgmt || true
+          echo "---------------------------------------"
+          kubectl logs -l app=kube-mgmt-opa-kube-mgmt -c opa --tail=-1
+          echo "---------------------------------------"
+          kubectl logs -l app=kube-mgmt-opa-kube-mgmt -c mgmt --tail=-1
+          echo "---------------------------------------"

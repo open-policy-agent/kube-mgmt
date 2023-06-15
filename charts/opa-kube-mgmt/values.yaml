@@ -142,14 +142,14 @@ mgmt:
   namespaces: []
 
   # kube-mgmt container will wait until OPA container comes to running state.
-  # Configure values for the startup probe, where kube-mgmt queries for the health 
+  # Configure values for the startup probe, where kube-mgmt queries for the health
   # of OPA container before it starts.
   startupProbe:
     failureThreshold: 5
     httpGet:
       path: /health
       port: 8181 # Port on which OPA is configured
-      scheme: HTTPS 
+      scheme: HTTPS
     initialDelaySeconds: 20
     successThreshold: 1
     timeoutSeconds: 10
