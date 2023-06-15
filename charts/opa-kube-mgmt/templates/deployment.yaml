@@ -16,11 +16,8 @@ spec:
   template:
     metadata:
       annotations:
-        {{- if and .Values.generateCerts .Values.useHttps }}
-        checksum/certs: {{ include (print $.Template.BasePath "/webhookconfiguration.yaml") . | sha256sum }}
-        {{- end }}
         {{- if .Values.opa }}
-        checksum/config: {{ include (print $.Template.BasePath "/secret-opa-config.yaml") . | sha256sum }}
+        checksum/config: {{ tpl (toYaml .Values.opa) . | sha256sum }}
         {{- end }}
 {{- if .Values.annotations }}
 {{ toYaml .Values.annotations | indent 8 }}

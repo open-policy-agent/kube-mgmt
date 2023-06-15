@@ -1,0 +1,58 @@
+suite: test health probes
+templates:
+  - deployment.yaml
+tests:
+  - it: should have only liveness and readiness for OPA
+    asserts:
+      - notExists:
+          path: spec.template.spec.containers[0].startupProbe
+      - exists:
+          path: spec.template.spec.containers[0].readinessProbe
+      - exists:
+          path: spec.template.spec.containers[0].livenessProbe
+      - equal:
+          path: spec.template.spec.containers[0].readinessProbe.httpGet.scheme
+          value: HTTPS
+      - equal:
+          path: spec.template.spec.containers[0].livenessProbe.httpGet.scheme
+          value: HTTPS
+  - it: should override scheme for liveness and readiness for OPA
+    set:
+      useHttps: false
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].readinessProbe.httpGet.scheme
+          value: HTTP
+      - equal:
+          path: spec.template.spec.containers[0].livenessProbe.httpGet.scheme
+          value: HTTP
+  - it: should have only startup for kube-mgmt
+    asserts:
+      - exists:
+          path: spec.template.spec.containers[1].startupProbe
+      - notExists:
+          path: spec.template.spec.containers[1].readinessProbe
+      - notExists:
+          path: spec.template.spec.containers[1].livenessProbe
+      - equal:
+          path: spec.template.spec.containers[1].startupProbe.httpGet.scheme
+          value: HTTPS
+  - it: should override startup for kube-mgmt
+    set:
+      mgmt:
+        startupProbe:
+          failureThreshold: 11
+          timeoutSeconds: 22
+    asserts:
+      - exists:
+          path: spec.template.spec.containers[1].startupProbe
+      - notExists:
+          path: spec.template.spec.containers[1].readinessProbe
+      - notExists:
+          path: spec.template.spec.containers[1].livenessProbe
+      - equal:
+          path: spec.template.spec.containers[1].startupProbe.failureThreshold
+          value: 11
+      - equal:
+          path: spec.template.spec.containers[1].startupProbe.timeoutSeconds
+          value: 22

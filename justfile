@@ -14,11 +14,13 @@ defaul:
 build-release:
   #!/usr/bin/env bash
   set -euxo pipefail
+
   skaffold build -b kube-mgmt -t {{VERSION}}
   helm package charts/opa-kube-mgmt --version {{VERSION}} --app-version {{VERSION}}
 
 _latest:
-  #!/bin/sh
+  #!/usr/bin/env sh
+
   if [ -n "$(echo ${SKAFFOLD_IMAGE_REPO}|grep '^openpolicyagent$')" ]; then
     crane tag ${SKAFFOLD_IMAGE} latest
   fi
@@ -37,13 +39,15 @@ lint: lint-go lint-helm
 
 # stub
 test-helm:
+  helm plugin ls | grep unittest || helm plugin install https://github.com/helm-unittest/helm-unittest.git
+  helm unittest -f '../../test/unit/*.yaml' charts/opa-kube-mgmt
 
 # golang unit tests
 test-go:
   go test ./...
 
 # run unit tests
-test: test-go test-helm
+test: lint test-go test-helm
 
 # (re) create local k8s cluster using k3d
 k3d: && _skaffold-ctx
@@ -70,6 +74,7 @@ down:
 test-e2e-sh:
   #!/usr/bin/env bash
   set -euo pipefail
+
   kubectl delete cm -l kube-mgmt/e2e=true || true
   ./test/e2e/{{E2E_TEST}}/test.sh
 
@@ -80,6 +85,7 @@ test-e2e: up test-e2e-sh
 test-e2e-all: build
   #!/usr/bin/env bash
   set -euo pipefail
+
   for E in $(find test/e2e/ -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort); do
     echo "================"
     echo "= Running ${E} "
