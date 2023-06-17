@@ -13,13 +13,14 @@ defaul:
 # build and publish image to release regisry, create chart archive
 build-release:
   #!/usr/bin/env bash
-  set -euxo pipefail
+  set -euo pipefail
 
   skaffold build -b kube-mgmt -t {{VERSION}}
   helm package charts/opa-kube-mgmt --version {{VERSION}} --app-version {{VERSION}}
 
 _latest:
-  #!/usr/bin/env sh
+  #!/usr/bin/env bash
+  set -euo pipefail
 
   if [ -n "$(echo ${SKAFFOLD_IMAGE_REPO}|grep '^openpolicyagent$')" ]; then
     crane tag ${SKAFFOLD_IMAGE} latest
@@ -63,6 +64,14 @@ build: _skaffold-ctx
 
 # install into local k8s
 up: _skaffold-ctx down
+  #!/usr/bin/env bash
+  set -euo pipefail
+
+  if [ ! -f "{{skaffoldTags}}" ]; then
+    echo 'Run `just build` to build docker image'
+    exit 1
+  fi
+
   kubectl delete cm -l kube-mgmt/e2e=true || true
   skaffold deploy --build-artifacts={{skaffoldTags}}
 
@@ -87,8 +96,8 @@ test-e2e-all: build
   set -euo pipefail
 
   for E in $(find test/e2e/ -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort); do
-    echo "================"
-    echo "= Running ${E} "
-    echo "================"
+    echo "========================"
+    echo "= Running e2e test ${E} "
+    echo "========================"
     just E2E_TEST=${E} test-e2e
   done
