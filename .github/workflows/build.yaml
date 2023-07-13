@@ -34,7 +34,7 @@ jobs:
       - uses: jaxxstorm/action-install-gh-release@v1
         with:
           repo: GoogleContainerTools/skaffold
-          tag: v1.38.0
+          tag: v2.6.1
           cache: enable
           extension-matching: disable
           rename-to: skaffold
