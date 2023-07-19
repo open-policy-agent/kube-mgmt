@@ -1,35 +1,31 @@
 # ![logo](./logo/logo.png) kube-mgmt
 
-Policy-based control for Kubernetes deployments.
-
-## About
-
 `kube-mgmt` manages policies / data of [Open Policy Agent](https://github.com/open-policy-agent/opa)
 instances in Kubernetes.
 
 Use `kube-mgmt` to:
-* Load policies and/or static data into OPA via `ConfigMap`.
+* Load policies and/or static data into OPA instance from `ConfigMap`.
 * Replicate Kubernetes resources
-including [CustomResourceDefinitions (CRDs)](https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/#customresourcedefinitions) into OPA.
+including [CustomResourceDefinitions (CRDs)](https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/#customresourcedefinitions) into OPA instance.
 
 ## Deployment Guide
 
-Both `OPA` and `kube-mgmt` can be installed using Helm chart.
+Both `OPA` and `kube-mgmt` can be installed using `opa-kube-mgmt` Helm chart.
 
 Follow [README](charts/opa-kube-mgmt/README.md) to install it into K8s cluster.
 
-## Policies and Data loading
+## Policies and data loading
 
 `kube-mgmt` automatically discovers policies and JSON data
 stored in `ConfigMaps` in Kubernetes and loads them into OPA.
-
-Policies or data can be disabled using `--enable-policy=false` or `--enable-data=false` flags respectively.
 
 `kube-mgmt` assumes a `ConfigMap` contains policy or JSON data if the `ConfigMap` is:
 
 - Created in a namespace listed in the `--namespaces` option. If you specify `--namespaces=*` then `kube-mgmt` will look for policies in ALL namespaces.
 - Labelled with `openpolicyagent.org/policy=rego` for policies
-- Labelled with `openpolicyagent.org/data=op` for JSON data
+- Labelled with `openpolicyagent.org/data=opa` for JSON data
+
+Policies or data discovery and loading can be disabled using `--enable-policy=false` or `--enable-data=false` flags respectively.
 
 Label names and their values can be configured using `--policy-label`, `--policy-value`, `--data-label`, `--data-value` CLI options.
 
@@ -67,10 +63,8 @@ You could refer to the data inside your policies as follows:
 ```ruby
 data.opa["hello-data"]["x.json"].a[0]  # evaluates to 1
 ```
-Note: "opa" is the namespace for the configMap.
-You may mock this in a test like other objects: `with data.opa as my_mocked_object`.
 
-## Caching
+## K8s resource replication
 
 `kube-mgmt` can be configured to replicate Kubernetes resources into OPA so that
 you can express policies over an eventually consistent cache of Kubernetes
@@ -199,15 +193,23 @@ allow {
 }
 ```
 
-## Development Guide
+## Development
 
-This project uses excellent tool [Just](https://github.com/casey/just#just) for buiding.
-It is configured by [justfile](./justfile) file in root directory.
-All available targets can be inspected by running `just` in command line.
+### Required software
 
-## Release procedure
+* [Go language toolchain](https://go.dev/doc/install).
+* [just](https://github.com/casey/just#just) - generic command runner.
+* [skaffold](https://skaffold.dev/) - build and publish docker images and more, `v2.x` and above is required.
+* [helm](https://helm.sh/docs/intro/install/)- package manager for k8s.
+* [k3d](https://k3d.io/#installation) - local k8s cluster with docker registry.
+ 
+This project uses `just` for buiding, testing and running `kube-mgmt` locally.
+It is configured from [justfile](./justfile) in root directory.
+All available receipes can be inspected by running `just` without arguments.
 
-To release a new version - just create [GitHub release](https://github.com/open-policy-agent/kube-mgmt/releases)
-with corresponding tag, following semantic version converntion.
+### Release
 
-As soon as tag will be pushed - CI pipeline will build and publish all artifacts.
+To release a new version - create [GitHub release](https://github.com/open-policy-agent/kube-mgmt/releases)
+with corresponding tag name that follows [semantic versioning convention](https://semver.org/).
+
+As soon as tag is pushed - CI pipeline will build and publish artifacts: docker images for supported architectures and helm chart.
