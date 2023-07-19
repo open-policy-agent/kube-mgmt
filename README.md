@@ -206,8 +206,8 @@ allow {
 * [Go language toolchain](https://go.dev/doc/install).
 * [just](https://github.com/casey/just#just) - generic command runner.
 * [skaffold](https://skaffold.dev/) - build and publish docker images and more, `v2.x` and above is required.
-* [helm](https://helm.sh/docs/intro/install/).
-* [k3d](https://k3d.io/v5.5.1/#installation) - local k8s cluster with docker registry.
+* [helm](https://helm.sh/docs/intro/install/)- package manager for k8s.
+* [k3d](https://k3d.io/#installation) - local k8s cluster with docker registry.
  
 This project uses `just` for buiding, testing and running `kube-mgmt` locally.
 It is configured from [justfile](./justfile) in root directory.
@@ -218,4 +218,4 @@ All available receipes can be inspected by running `just` without arguments.
 To release a new version - create [GitHub release](https://github.com/open-policy-agent/kube-mgmt/releases)
 with corresponding tag name that follows [semantic versioning convention](https://semver.org/).
 
-As soon as tag is pushed - CI pipeline will build and publish all the artifacts.
+As soon as tag is pushed - CI pipeline will build and publish artifacts: docker images for supported architectures and helm chart.
