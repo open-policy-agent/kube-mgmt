@@ -1,4 +1,6 @@
 {{- if .Values.rbac.create }}
+
+{{- if has "*" .Values.mgmt.namespaces }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -27,6 +29,7 @@ rules:
   - apiGroups: [""]
     resources: ["namespaces"]
     verbs: ["get", "list", "watch"]
+
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -46,4 +49,56 @@ subjects:
   - kind: ServiceAccount
     name: {{ template "opa.serviceAccountName" . }}
     namespace: {{ .Release.Namespace }}
+
+{{- else }}
+{{- range (coalesce .Values.mgmt.namespaces (list .Release.Namespace)) }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  labels:
+    app: {{ template "opa.name" $ }}
+    chart: {{ template "opa.chart" $ }}
+    heritage: {{ $.Release.Service }}
+    release: {{ $.Release.Name }}
+    component: mgmt
+  name: {{ template "opa.mgmtfullname" $ }}
+  namespace: {{ . }}
+rules:
+  # Inject user-provided RBAC rules
+  {{- with $.Values.rbac.extraRules }}
+  {{ . | toYaml | nindent 2 }}
+  {{- end }}
+
+  # Allow kube-mgmt to have "get", "list" and "watch" actions over ConfigMaps at a cluster level
+  # to allow loading policies from any namespace.
+  # Additionally, allow "patch" and "update" actionson ConfigMaps so kube-mgmt can
+  # annotate the ConfigMaps to indicate if they were loaded successfully or not.
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get", "list", "watch", "update", "patch"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  labels:
+    app: {{ template "opa.name" $ }}
+    chart: {{ template "opa.chart" $ }}
+    heritage: {{ $.Release.Service }}
+    release: {{ $.Release.Name }}
+    component: mgmt
+  name: {{ template "opa.mgmtfullname" $ }}
+  namespace: {{ . }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ template "opa.mgmtfullname" $ }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ template "opa.serviceAccountName" $ }}
+    namespace: {{ $.Release.Namespace }}
+{{- end }}
+{{- end }}
+
 {{- end }}

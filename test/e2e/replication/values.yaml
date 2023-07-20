@@ -1,4 +1,5 @@
 mgmt:
+  namespaces: ["ignore-me", "dont-ignore-me"]
   replicate:
     namespace:
       - v1/configmaps
