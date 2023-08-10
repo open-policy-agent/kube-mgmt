@@ -1,5 +1,5 @@
 mgmt:
-  namespaces: ["ignore-me", "dont-ignore-me"]
+  namespaces: ["*"]
   extraArgs:
     - "--replicate-ignore-namespaces=ignore-me"
   replicate:
