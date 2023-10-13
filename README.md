@@ -29,7 +29,7 @@ Policies or data can be disabled using `--enable-policy=false` or `--enable-data
 
 - Created in a namespace listed in the `--namespaces` option. If you specify `--namespaces=*` then `kube-mgmt` will look for policies in ALL namespaces.
 - Labelled with `openpolicyagent.org/policy=rego` for policies
-- Labelled with `openpolicyagent.org/data=op` for JSON data
+- Labelled with `openpolicyagent.org/data=opa` for JSON data
 
 Label names and their values can be configured using `--policy-label`, `--policy-value`, `--data-label`, `--data-value` CLI options.
 
