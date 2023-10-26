@@ -14,3 +14,4 @@ mgmt:
     - "--policy-value=111"
     - "--data-label=asdasd/data"
     - "--data-value=222"
+    - "--log-level=debug"

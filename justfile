@@ -85,6 +85,7 @@ test-e2e-sh:
   set -euo pipefail
 
   kubectl delete cm -l kube-mgmt/e2e=true || true
+  kubectl delete svc -l kube-mgmt/e2e=true || true
   ./test/e2e/{{E2E_TEST}}/test.sh
 
 # run single e2e test
@@ -96,8 +97,8 @@ test-e2e-all: build
   set -euo pipefail
 
   for E in $(find test/e2e/ -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort); do
-    echo "========================"
-    echo "= Running e2e test ${E} "
-    echo "========================"
+    echo "===================================================="
+    echo "= Running e2e: \`${E}\` "
+    echo "===================================================="
     just E2E_TEST=${E} test-e2e
   done
