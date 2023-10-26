@@ -1,0 +1,30 @@
+suite: test configmap rbac
+templates:
+  - rbac-mgmt.yaml
+tests:
+  - it: should create cluster role by default
+    asserts:
+      - hasDocuments:
+          count: 2
+      - containsDocument:
+          kind: ClusterRole
+          apiVersion: rbac.authorization.k8s.io/v1
+          any: true
+      - containsDocument:
+          kind: ClusterRoleBinding
+          apiVersion: rbac.authorization.k8s.io/v1
+          any: true
+  - it: should not create cluster role if rbac disabled
+    set:
+      rbac:
+        create: false
+    asserts:
+      - hasDocuments:
+          count: 0
+  - it: should not create cluster role if mgmt disabled
+    set:
+      mgmt:
+        enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0
