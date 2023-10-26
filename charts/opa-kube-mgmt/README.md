@@ -5,8 +5,8 @@ engine designed for cloud-native environments.
 
 ## Overview
 
-This helm chart installs `OPA` together with `kube-mgmt` sidecar, 
-that allows to manage OPA policies and data via Kubernetes ConfigMaps.
+This helm chart installs `OPA` together with `kube-mgmt` sidecar,
+that allows to manage OPA policies and data via Kubernetes ``ConfigMaps`.
 
 Optionally, the chart allows to install a [Kubernetes admission
 controller](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/).
@@ -27,9 +27,9 @@ helm repo update
 helm upgrade -i -n opa --create-namespace opa opa/opa-kube-mgmt
 ```
 
-Once installed, the OPA will download a sample bundle from https://www.openpolicyagent.org. 
+Once installed, the OPA will download a sample bundle from https://www.openpolicyagent.org.
 It contains a simple policy that restricts the hostnames that can be specified on Ingress objects created in the
-`opa-example` namespace. 
+`opa-example` namespace.
 
 You can download the bundle and inspect it yourself:
 
@@ -37,9 +37,6 @@ You can download the bundle and inspect it yourself:
 mkdir example && cd example
 curl -s -L https://www.openpolicyagent.org/bundles/kubernetes/admission | tar xzv
 ```
-
-See the [NOTES.txt](./templates/NOTES.txt) file for examples of how to exercise
-the admission controller.
 
 ## Configuration
 

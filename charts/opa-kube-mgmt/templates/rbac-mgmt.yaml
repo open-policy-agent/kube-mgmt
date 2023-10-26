@@ -1,4 +1,12 @@
+{{- define "opa.rbac.cm.rules" -}}
+rules:
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get", "list", "watch", "update", "patch"]
+{{- end -}}
+
 {{- if and .Values.rbac.create .Values.mgmt.enabled -}}
+{{- if eq (.Values.mgmt.namespaces | join ",") "*" }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -9,18 +17,7 @@ metadata:
     release: {{ .Release.Name }}
     component: mgmt
   name: {{ template "opa.mgmtfullname" . }}
-rules:
-  # Allow kube-mgmt to have "get", "list" and "watch" actions over ConfigMaps at a cluster level
-  # to allow loading policies from any namespace.
-  # Additionally, allow "patch" and "update" actionson ConfigMaps so kube-mgmt can
-  # annotate the ConfigMaps to indicate if they were loaded successfully or not.
-  - apiGroups: [""]
-    resources: ["configmaps"]
-    verbs: ["get", "list", "watch", "update", "patch"]
-
-  - apiGroups: [""]
-    resources: ["namespaces"]
-    verbs: ["get", "list", "watch"]
+{{ include "opa.rbac.cm.rules" . }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -39,4 +36,71 @@ subjects:
   - kind: ServiceAccount
     name: {{ template "opa.serviceAccountName" . }}
     namespace: {{ .Release.Namespace }}
+{{- else if and (eq (kindOf .Values.mgmt.namespaces) "slice") (gt (len .Values.mgmt.namespaces) 0) }}
+{{- range .Values.mgmt.namespaces }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  labels:
+    app: {{ template "opa.name" $ }}
+    chart: {{ template "opa.chart" $ }}
+    release: {{ $.Release.Name }}
+    component: mgmt
+  name: {{ template "opa.mgmtfullname" $ }}
+  namespace: {{ . }}
+{{ include "opa.rbac.cm.rules" $ }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  labels:
+    app: {{ template "opa.name" $ }}
+    chart: {{ template "opa.chart" $ }}
+    release: {{ $.Release.Name }}
+    component: mgmt
+  name: {{ template "opa.mgmtfullname" $ }}
+  namespace: {{ . }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ template "opa.mgmtfullname" $ }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ template "opa.serviceAccountName" $ }}
+    namespace: {{ $.Release.Namespace }}
 {{- end }}
+{{- else }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  labels:
+    app: {{ template "opa.name" . }}
+    chart: {{ template "opa.chart" . }}
+    release: {{ .Release.Name }}
+    component: mgmt
+  name: {{ template "opa.mgmtfullname" . }}
+  namespace: {{ .Release.Namespace }}
+{{ include "opa.rbac.cm.rules" . }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  labels:
+    app: {{ template "opa.name" . }}
+    chart: {{ template "opa.chart" . }}
+    release: {{ .Release.Name }}
+    component: mgmt
+  name: {{ template "opa.mgmtfullname" . }}
+  namespace: {{ .Release.Namespace }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ template "opa.mgmtfullname" . }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ template "opa.serviceAccountName" . }}
+    namespace: {{ .Release.Namespace }}
+{{- end }}
+{{- end -}}

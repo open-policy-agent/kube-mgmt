@@ -181,9 +181,10 @@ spec:
             {{- end }}
             - --opa-url={{ .Values.useHttps | ternary "https" "http" }}://127.0.0.1:{{ .Values.port }}/v1
             - --opa-allow-insecure
-            - --namespaces={{ coalesce .Values.mgmt.namespaces (list .Release.Namespace) | join "," }}
-            - --enable-data={{ .Values.mgmt.data.enabled }}
-            - --enable-policies={{ .Values.mgmt.policies.enabled }}
+            - "--namespaces={{ coalesce .Values.mgmt.namespaces (list .Release.Namespace) | join "," }}"
+            - "--enable-data={{ .Values.mgmt.data.enabled }}"
+            - "--enable-policies={{ .Values.mgmt.policies.enabled }}"
+
             - "--replicate-path={{ .Values.mgmt.replicate.path }}"
             {{- range .Values.mgmt.replicate.namespace }}
             - "--replicate={{ . }}"

@@ -2,7 +2,53 @@ suite: test configmap rbac
 templates:
   - rbac-mgmt.yaml
 tests:
-  - it: should create cluster role by default
+  - it: should create current namespace role by default
+    asserts:
+      - hasDocuments:
+          count: 2
+      - containsDocument:
+          kind: Role
+          apiVersion: rbac.authorization.k8s.io/v1
+          namespace: NAMESPACE
+          any: true
+      - containsDocument:
+          kind: RoleBinding
+          apiVersion: rbac.authorization.k8s.io/v1
+          namespace: NAMESPACE
+          any: true
+
+  - it: should create namespace roles when namespaces configured
+    set:
+      mgmt:
+        namespaces: ["qwe", "asd"]
+    asserts:
+      - hasDocuments:
+          count: 4
+      - containsDocument:
+          kind: Role
+          apiVersion: rbac.authorization.k8s.io/v1
+          namespace: "qwe"
+          any: true
+      - containsDocument:
+          kind: Role
+          apiVersion: rbac.authorization.k8s.io/v1
+          namespace: "asd"
+          any: true
+      - containsDocument:
+          kind: RoleBinding
+          apiVersion: rbac.authorization.k8s.io/v1
+          namespace: "qwe"
+          any: true
+      - containsDocument:
+          kind: RoleBinding
+          apiVersion: rbac.authorization.k8s.io/v1
+          namespace: "asd"
+          any: true
+
+  - it: should create cluster role if namespace is asterisk
+    set:
+      mgmt:
+        namespaces: "*"
     asserts:
       - hasDocuments:
           count: 2
@@ -14,14 +60,30 @@ tests:
           kind: ClusterRoleBinding
           apiVersion: rbac.authorization.k8s.io/v1
           any: true
-  - it: should not create cluster role if rbac disabled
+  - it: should create cluster role if namespace is single item array with asterisk
+    set:
+      mgmt:
+        namespaces: ["*"]
+    asserts:
+      - hasDocuments:
+          count: 2
+      - containsDocument:
+          kind: ClusterRole
+          apiVersion: rbac.authorization.k8s.io/v1
+          any: true
+      - containsDocument:
+          kind: ClusterRoleBinding
+          apiVersion: rbac.authorization.k8s.io/v1
+          any: true
+
+  - it: should not create roles if rbac disabled
     set:
       rbac:
         create: false
     asserts:
       - hasDocuments:
           count: 0
-  - it: should not create cluster role if mgmt disabled
+  - it: should not create roles if mgmt disabled
     set:
       mgmt:
         enabled: false

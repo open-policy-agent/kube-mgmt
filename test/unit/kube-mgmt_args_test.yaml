@@ -6,13 +6,42 @@ tests:
     asserts:
       - contains:
           path: spec.template.spec.containers[1].args
+          content: "--enable-data=true"
+      - contains:
+          path: spec.template.spec.containers[1].args
+          content: "--enable-data=true"
+      - contains:
+          path: spec.template.spec.containers[1].args
+          content: "--namespaces=NAMESPACE"
+      - contains:
+          path: spec.template.spec.containers[1].args
           content: "--replicate-ignore-namespaces="
   - it: should override args
     set:
       mgmt:
+        namespaces: ["111", "222"]
         replicate:
           ignoreNs: ["qwe", "asd"]
     asserts:
       - contains:
           path: spec.template.spec.containers[1].args
           content: "--replicate-ignore-namespaces=qwe,asd"
+      - contains:
+          path: spec.template.spec.containers[1].args
+          content: "--namespaces=111,222"
+  - it: should override all namespaces 1
+    set:
+      mgmt:
+        namespaces: ["*"]
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[1].args
+          content: "--namespaces=*"
+  - it: should override all namespaces 2
+    set:
+      mgmt:
+        namespaces: "*"
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[1].args
+          content: "--namespaces=*"
