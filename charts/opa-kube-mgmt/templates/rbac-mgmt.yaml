@@ -3,9 +3,6 @@ rules:
   - apiGroups: [""]
     resources: ["configmaps"]
     verbs: ["get", "list", "watch", "update", "patch"]
-  - apiGroups: [""]
-    resources: ["namespaces"]
-    verbs: ["get", "list", "watch"]
 {{- end -}}
 
 {{- if and .Values.rbac.create .Values.mgmt.enabled -}}
