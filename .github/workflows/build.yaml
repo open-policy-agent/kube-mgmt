@@ -6,6 +6,7 @@ on:
       - "logo/**"
       - "examples/**"
       - "README.md"
+      - "charts/opa-kube-mgmt/README.md"
     branches:
       - "master"
   pull_request:
