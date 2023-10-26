@@ -139,6 +139,9 @@ mgmt:
   extraArgs: []
   extraEnv: []
   resources: {}
+
+  # if empty - the current namespaces is watched
+  # if `*` - all namespaces are watched
   namespaces: []
 
   # kube-mgmt container will wait until OPA container comes to running state.
