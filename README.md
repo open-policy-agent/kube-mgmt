@@ -21,7 +21,8 @@ stored in `ConfigMaps` in Kubernetes and loads them into OPA.
 
 `kube-mgmt` assumes a `ConfigMap` contains policy or JSON data if the `ConfigMap` is:
 
-- Created in a namespace listed in the `--namespaces` option. If you specify `--namespaces=*` then `kube-mgmt` will look for policies in ALL namespaces.
+- Created in a namespace listed in the `--namespaces` option.
+  If you specify `--namespaces=*` then `kube-mgmt` will look for policies in ALL namespaces.
 - Labelled with `openpolicyagent.org/policy=rego` for policies
 - Labelled with `openpolicyagent.org/data=opa` for JSON data
 
@@ -60,11 +61,14 @@ Note: "x.json" may be any key.
 
 You could refer to the data inside your policies as follows:
 
-```ruby
+```rego
 data.opa["hello-data"]["x.json"].a[0]  # evaluates to 1
 ```
 
 ## K8s resource replication
+
+> [!WARNING]
+> K8s resource replication requires global cluster permission with `ClusterRole` and `ClusterRoleBinding`.
 
 `kube-mgmt` can be configured to replicate Kubernetes resources into OPA so that
 you can express policies over an eventually consistent cache of Kubernetes
@@ -79,6 +83,9 @@ Replication is enabled with the following options:
 # Replicate cluster-level resources. May be specified multiple times.
 --replicate-cluster=<[group/]version/resource>
 ```
+
+By default resources are replicated from all namespaces.
+Use `--replicate-ignore-namespaces` option to exclude particular namespaces from replication.
 
 Kubernetes resources replicated into OPA are laid out as follows:
 
@@ -104,7 +111,7 @@ service.metadata.labels["foo"]
 
 An alternative way to visualize the layout is as single JSON document:
 
-```
+```json
 {
   "kubernetes": {
     "services": {
@@ -126,9 +133,7 @@ The example below would replicate Deployments, Services, and Nodes into OPA:
 --replicate-cluster=v1/nodes
 ```
 
-### Custom Resource Definitions (CRDs)
-
-`kube-mgmt` can also be configured to replicate [Kubernetes Custom Resources](https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/) using the `--replicate` and `--replicate-cluster` options. For an example of how OPA can be used to enforce admission control polices on Kubernetes custom resources see [Admission Control For Custom Resources](./docs/admission-control-crd.md)
+Custom Resource Definitions can also be replicated using the same `--replicate` and `--replicate-cluster` options.
 
 ## Admission Control
 
@@ -202,7 +207,7 @@ allow {
 * [skaffold](https://skaffold.dev/) - build and publish docker images and more, `v2.x` and above is required.
 * [helm](https://helm.sh/docs/intro/install/)- package manager for k8s.
 * [k3d](https://k3d.io/#installation) - local k8s cluster with docker registry.
- 
+
 This project uses `just` for buiding, testing and running `kube-mgmt` locally.
 It is configured from [justfile](./justfile) in root directory.
 All available receipes can be inspected by running `just` without arguments.
