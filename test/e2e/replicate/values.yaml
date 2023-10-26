@@ -1,0 +1,28 @@
+useHttps: false
+
+opa: null
+
+authz:
+  enabled: false
+
+mgmt:
+  data:
+    enabled: false
+  policies:
+    enabled: false
+  startupProbe:
+    httpGet:
+      scheme: HTTP
+  replicate:
+    ignoreNs:
+      - "ignore-me"
+    namespace:
+      - v1/services
+  extraArgs:
+    - "--log-level=debug"
+
+rbac:
+  extraRules:
+    - apiGroups: [""]
+      resources: ["services"]
+      verbs: ["*"]
