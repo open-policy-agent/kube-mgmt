@@ -1,0 +1,18 @@
+suite: test kube-mgmt container args
+templates:
+  - deployment.yaml
+tests:
+  - it: should have default args
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[1].args
+          content: "--replicate-ignore-namespaces="
+  - it: should override args
+    set:
+      mgmt:
+        replicate:
+          ignoreNs: ["qwe", "asd"]
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[1].args
+          content: "--replicate-ignore-namespaces=qwe,asd"

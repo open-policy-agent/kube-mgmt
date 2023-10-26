@@ -167,6 +167,8 @@ mgmt:
 #     - [group/]version/resource
     path: kubernetes
 
+    ignoreNs: []
+
 # Log level for OPA ('debug', 'info', 'error') (app default=info)
 logLevel: info
 
