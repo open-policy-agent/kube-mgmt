@@ -201,21 +201,23 @@ func run(params *params) {
 		if err != nil {
 			logrus.Fatalf("Failed to get dynamic client: %v", err)
 		}
-	}
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 
-	opts := data.WithIgnoreNamespaces(params.replicateIgnoreNs)
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
 
-	for _, gvk := range params.replicateCluster {
-		sync := data.NewFromInterface(client, opa.New(params.opaURL, params.opaAuth).Prefix(params.replicatePath), getResourceType(gvk, false), opts)
-		go sync.RunContext(ctx)
+		opts := data.WithIgnoreNamespaces(params.replicateIgnoreNs)
+
+		for _, gvk := range params.replicateCluster {
+			sync := data.NewFromInterface(client, opa.New(params.opaURL, params.opaAuth).Prefix(params.replicatePath), getResourceType(gvk, false), opts)
+			go sync.RunContext(ctx)
+		}
+
+		for _, gvk := range params.replicateNamespace {
+			sync := data.NewFromInterface(client, opa.New(params.opaURL, params.opaAuth).Prefix(params.replicatePath), getResourceType(gvk, true), opts)
+			go sync.RunContext(ctx)
+		}
 	}
 
-	for _, gvk := range params.replicateNamespace {
-		sync := data.NewFromInterface(client, opa.New(params.opaURL, params.opaAuth).Prefix(params.replicatePath), getResourceType(gvk, true), opts)
-		go sync.RunContext(ctx)
-	}
 	quit := make(chan struct{})
 	<-quit
 }
