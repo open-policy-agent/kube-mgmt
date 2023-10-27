@@ -26,24 +26,26 @@ _latest:
     crane tag ${SKAFFOLD_IMAGE} latest
   fi
 
+_helm-unittest:
+  helm plugin ls | grep unittest || helm plugin install https://github.com/helm-unittest/helm-unittest.git
+
 # golang linter
 lint-go:
   go vet ./...
   staticcheck ./...
 
 # helm linter
-lint-helm:
-  ./test/linter/test.sh
+lint-helm filter="*": _helm-unittest
+  helm unittest -f '../../test/lint/{{filter}}.yaml' charts/opa-kube-mgmt
 
-# run unit tests
+# run all unit tests
 lint: lint-go lint-helm
 
-# stub
-test-helm:
-  helm plugin ls | grep unittest || helm plugin install https://github.com/helm-unittest/helm-unittest.git
-  helm unittest -f '../../test/unit/*.yaml' charts/opa-kube-mgmt
+# run helm unit tests
+test-helm filter="*": _helm-unittest
+  helm unittest -f '../../test/unit/{{filter}}.yaml' charts/opa-kube-mgmt
 
-# golang unit tests
+# run golang unit tests
 test-go:
   go test ./...
 

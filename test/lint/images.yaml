@@ -1,0 +1,65 @@
+suite: lint image and mgmt.image
+templates:
+  - fake.yaml
+tests:
+  - it: image is null
+    set:
+      image: null
+    asserts:
+      - failedTemplate:
+          errorMessage: |
+            values don't meet the specifications of the schema(s) in the following chart(s):
+            opa-kube-mgmt:
+            - (root): image is required
+  - it: image.repository not string
+    set:
+      image:
+        repository: 5
+    asserts:
+      - failedTemplate:
+          errorMessage: |
+            values don't meet the specifications of the schema(s) in the following chart(s):
+            opa-kube-mgmt:
+            - image.repository: Invalid type. Expected: string, given: integer
+  - it: image.tag not string
+    set:
+      image:
+        tag: 5
+    asserts:
+      - failedTemplate:
+          errorMessage: |
+            values don't meet the specifications of the schema(s) in the following chart(s):
+            opa-kube-mgmt:
+            - image.tag: Invalid type. Expected: string, given: integer
+  - it: mgmt.image is null
+    set:
+      mgmt:
+        image: null
+    asserts:
+      - failedTemplate:
+          errorMessage: |
+            values don't meet the specifications of the schema(s) in the following chart(s):
+            opa-kube-mgmt:
+            - mgmt: image is required
+  - it: mgmt.image.repository not string
+    set:
+      mgmt:
+        image:
+          repository: 5
+    asserts:
+      - failedTemplate:
+          errorMessage: |
+            values don't meet the specifications of the schema(s) in the following chart(s):
+            opa-kube-mgmt:
+            - mgmt.image.repository: Invalid type. Expected: string, given: integer
+  - it: mgmt.image.tag not string
+    set:
+      mgmt:
+        image:
+          tag: 5
+    asserts:
+      - failedTemplate:
+          errorMessage: |
+            values don't meet the specifications of the schema(s) in the following chart(s):
+            opa-kube-mgmt:
+            - mgmt.image.tag: Invalid type. Expected: string, given: integer

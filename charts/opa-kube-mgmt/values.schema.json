@@ -1,0 +1,28 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/open-policy-agent/kube-mgmt",
+  "title": "kube-mgmt helm values",
+
+  "definitions": {
+    "image": {
+      "type": "object", "title": "OPA docker image configuration", "required": ["repository", "tag"],
+      "properties": {
+        "repository": {"type": "string"},
+        "tag": {"type": "string"},
+        "pullPolicy": {"type": "string", "default": "IfNotPresent"}
+      }
+    }
+  },
+
+  "type": "object", "required": ["image", "mgmt"], "additionalProperties": true,
+  "properties": {
+    "image": {"$ref":  "#/definitions/image"},
+    "mgmt": {
+      "type": "object", "additionalProperties": true, "required": ["image", "enabled"],
+      "properties": {
+        "enabled": {"type": "boolean", "default": true},
+        "image": {"$ref": "#/definitions/image"}
+      }
+    }
+  }
+}

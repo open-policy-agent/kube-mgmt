@@ -109,7 +109,7 @@ authz:
 hostNetwork:
   enabled: false
 
-# Docker image and tag to deploy.
+# OPA docker image configuration.
 image:
   repository: openpolicyagent/opa
   tag: 0.53.1
@@ -134,7 +134,7 @@ mgmt:
   enabled: true
   image:
     repository: openpolicyagent/kube-mgmt
-    tag: null # appVersion is used by default, set to desired value to override
+    tag: "0.0.0" # appVersion is used by default, set to desired value to override
     pullPolicy: IfNotPresent
   extraArgs: []
   extraEnv: []
