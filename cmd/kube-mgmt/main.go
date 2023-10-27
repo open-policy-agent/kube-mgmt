@@ -39,8 +39,6 @@ type params struct {
 	policyValue        string
 	dataLabel          string
 	dataValue          string
-	podName            string
-	podNamespace       string
 	enablePolicies     bool
 	enableData         bool
 	namespaces         []string
@@ -80,18 +78,18 @@ func main() {
 	rootCmd.Flags().StringVarP(&params.opaAuthFile, "opa-auth-token-file", "", "", "set file containing authentication token for OPA API endpoint")
 	rootCmd.Flags().StringVarP(&params.opaCAFile, "opa-ca-file", "", "", "set file containing certificate authority for OPA certificate")
 	rootCmd.Flags().BoolVarP(&params.opaAllowInsecure, "opa-allow-insecure", "", false, "allow insecure https connections to OPA")
-	rootCmd.Flags().StringVarP(&params.podName, "pod-name", "", "", "set pod name (required for admission registration ownership)")
-	rootCmd.Flags().StringVarP(&params.podNamespace, "pod-namespace", "", "", "set pod namespace (required for admission registration ownership)")
-	rootCmd.Flags().StringVar(&params.policyLabel, "policy-label", "openpolicyagent.org/policy", "label name for filtering ConfigMaps with policies")
-	rootCmd.Flags().StringVar(&params.policyValue, "policy-value", "rego", "label value for filtering ConfigMaps with policies")
-	rootCmd.Flags().StringVar(&params.dataLabel, "data-label", "openpolicyagent.org/data", "label name for filtering ConfigMaps with data")
-	rootCmd.Flags().StringVar(&params.dataValue, "data-value", "opa", "label value for filtering ConfigMaps with data")
 	rootCmd.Flags().StringVar(&params.logLevel, "log-level", "info", "set log level {debug, info, warn}")
 
-	// Replication options.
-	rootCmd.Flags().BoolVarP(&params.enablePolicies, "enable-policies", "", true, "whether to automatically discover policies from labelled ConfigMaps")
-	rootCmd.Flags().BoolVarP(&params.enableData, "enable-data", "", true, "whether to automatically discover data from labelled ConfigMaps")
+    // policy / data
+    rootCmd.Flags().BoolVarP(&params.enablePolicies, "enable-policies", "", true, "whether to automatically discover policies from labelled ConfigMaps")
+    rootCmd.Flags().StringVar(&params.policyLabel, "policy-label", "openpolicyagent.org/policy", "label name for filtering ConfigMaps with policies")
+    rootCmd.Flags().StringVar(&params.policyValue, "policy-value", "rego", "label value for filtering ConfigMaps with policies")
+    rootCmd.Flags().BoolVarP(&params.enableData, "enable-data", "", true, "whether to automatically discover data from labelled ConfigMaps")
+    rootCmd.Flags().StringVar(&params.dataLabel, "data-label", "openpolicyagent.org/data", "label name for filtering ConfigMaps with data")
+    rootCmd.Flags().StringVar(&params.dataValue, "data-value", "opa", "label value for filtering ConfigMaps with data")
 	rootCmd.Flags().StringSliceVarP(&params.namespaces, "namespaces", "", []string{"opa"}, "namespaces to load policies and data from")
+
+    // replication
 	rootCmd.Flags().VarP(&params.replicateNamespace, "replicate", "", "replicate namespace-level resources")
 	rootCmd.Flags().VarP(&params.replicateCluster, "replicate-cluster", "", "replicate cluster-level resources")
 	rootCmd.Flags().StringVarP(&params.replicatePath, "replicate-path", "", "kubernetes", "set path to replicate data into")
