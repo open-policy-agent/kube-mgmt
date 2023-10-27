@@ -87,7 +87,7 @@ func main() {
     rootCmd.Flags().BoolVarP(&params.enableData, "enable-data", "", true, "whether to automatically discover data from labelled ConfigMaps")
     rootCmd.Flags().StringVar(&params.dataLabel, "data-label", "openpolicyagent.org/data", "label name for filtering ConfigMaps with data")
     rootCmd.Flags().StringVar(&params.dataValue, "data-value", "opa", "label value for filtering ConfigMaps with data")
-	rootCmd.Flags().StringSliceVarP(&params.namespaces, "namespaces", "", []string{"opa"}, "namespaces to load policies and data from")
+	rootCmd.Flags().StringSliceVarP(&params.namespaces, "namespaces", "", []string{""}, "namespaces to load policies and data from")
 
     // replication
 	rootCmd.Flags().VarP(&params.replicateNamespace, "replicate", "", "replicate namespace-level resources")
