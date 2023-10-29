@@ -134,7 +134,7 @@ mgmt:
   enabled: true
   image:
     repository: openpolicyagent/kube-mgmt
-    tag: "0.0.0" # appVersion is used by default, set to desired value to override
+    tag: "" # appVersion is used by default, set to desired value to override
     pullPolicy: IfNotPresent
   extraArgs: []
   extraEnv: []
