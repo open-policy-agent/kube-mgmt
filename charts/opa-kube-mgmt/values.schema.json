@@ -23,6 +23,14 @@
         "enabled": {"type": "boolean", "default": true},
         "image": {"$ref": "#/definitions/image"}
       }
+    },
+    "serviceAccount": {
+      "type": "object",
+      "properties": {
+        "create": {"type": "boolean", "default": true},
+        "annotations": {"type": "object", "additionalProperties": {"type": "string"}, "default": {}},
+        "name": {"type": ["string", "null"], "default": null}
+      }
     }
   }
 }
