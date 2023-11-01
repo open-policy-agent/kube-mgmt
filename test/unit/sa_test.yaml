@@ -1,0 +1,19 @@
+suite: test serviceaccount annotations
+templates:
+  - serviceaccount.yaml
+tests:
+  - it: should omit serviceaccount annotations by default
+    asserts:
+      - notExists:
+          path: metadata.annotations
+  - it: should render serviceaccount annotations when provided
+    set:
+      serviceAccount:
+        annotations:
+          foo: bar
+    asserts:
+      - exists:
+          path: metadata.annotations
+      - equal:
+          path: metadata.annotations.foo
+          value: bar
