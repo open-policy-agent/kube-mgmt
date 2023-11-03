@@ -10,7 +10,8 @@ including [CustomResourceDefinitions (CRDs)](https://kubernetes.io/docs/concepts
 
 ## Deployment Guide
 
-Both `OPA` and `kube-mgmt` can be installed using `opa-kube-mgmt` Helm chart.
+Both `OPA` and `kube-mgmt` can be installed using [opa-kube-mgmt](
+https://artifacthub.io/packages/helm/opa-kube-mgmt/opa-kube-mgmt) Helm chart.
 
 Follow [README](charts/opa-kube-mgmt/README.md) to install it into K8s cluster.
 
