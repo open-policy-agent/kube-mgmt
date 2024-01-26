@@ -209,9 +209,9 @@ allow {
 * [helm](https://helm.sh/docs/intro/install/)- package manager for k8s.
 * [k3d](https://k3d.io/#installation) - local k8s cluster with docker registry.
 
-This project uses `just` for buiding, testing and running `kube-mgmt` locally.
+This project uses `just` for building, testing and running `kube-mgmt` locally.
 It is configured from [justfile](./justfile) in root directory.
-All available receipes can be inspected by running `just` without arguments.
+All available recipes can be inspected by running `just` without arguments.
 
 ### Release
 
