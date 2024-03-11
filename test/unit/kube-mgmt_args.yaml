@@ -45,3 +45,19 @@ tests:
       - contains:
           path: spec.template.spec.containers[1].args
           content: "--namespaces=*"
+  - it: should add extraVolumes if authz is disabled & no bootstrapPolicies are provided
+    set:
+      useHttps: false
+      authz:
+        enabled: false
+      extraVolumes:
+        - name: example-app-auth-config
+          secret:
+            secretName: example-app-auth-config
+    asserts:
+      - contains:
+          path: spec.template.spec.volumes
+          content: 
+            name: example-app-auth-config
+            secret:
+              secretName: example-app-auth-config
