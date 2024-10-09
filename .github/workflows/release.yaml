@@ -32,7 +32,7 @@ jobs:
         run: |
           just VERSION=${{ env.VERSION }} build-release
       - name: upload helm artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: "helm"
           path: "opa-kube-mgmt-${{ env.VERSION }}.tgz"
