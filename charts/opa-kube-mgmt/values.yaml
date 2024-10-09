@@ -112,7 +112,7 @@ hostNetwork:
 # OPA docker image configuration.
 image:
   repository: openpolicyagent/opa
-  tag: 0.53.1
+  tag: 0.69.0
   pullPolicy: IfNotPresent
 
 # One or more secrets to be used when pulling images
