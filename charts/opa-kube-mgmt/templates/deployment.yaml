@@ -19,6 +19,9 @@ spec:
         {{- if .Values.opa }}
         checksum/config: {{ tpl (toYaml .Values.opa) . | sha256sum }}
         {{- end }}
+        {{- if .Values.admissionController.enabled }}
+        checksum/webhookconfiguration: {{ include (print $.Template.BasePath "/webhookconfiguration.yaml" ) . | sha256sum }}
+        {{- end }}
 {{- if .Values.annotations }}
 {{ toYaml .Values.annotations | indent 8 }}
 {{- end }}
