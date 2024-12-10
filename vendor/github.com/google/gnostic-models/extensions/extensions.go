@@ -15,7 +15,7 @@
 package gnostic_extension_v1
 
 import (
-	"io/ioutil"
+	"io"
 	"log"
 	"os"
 
@@ -28,7 +28,7 @@ type extensionHandler func(name string, yamlInput string) (bool, proto.Message, 
 // Main implements the main program of an extension handler.
 func Main(handler extensionHandler) {
 	// unpack the request
-	data, err := ioutil.ReadAll(os.Stdin)
+	data, err := io.ReadAll(os.Stdin)
 	if err != nil {
 		log.Println("File error:", err.Error())
 		os.Exit(1)

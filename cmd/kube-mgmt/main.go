@@ -9,7 +9,6 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"path"
@@ -141,7 +140,7 @@ func run(params *params) {
 	}
 
 	if params.opaAuthFile != "" {
-		file, err := ioutil.ReadFile(params.opaAuthFile)
+		file, err := os.ReadFile(params.opaAuthFile)
 		if err != nil {
 			logrus.Fatalf("Failed to read opa auth token file %s", params.opaAuthFile)
 		}
@@ -162,7 +161,7 @@ func run(params *params) {
 		if rootCAs == nil {
 			rootCAs = x509.NewCertPool()
 		}
-		certs, err := ioutil.ReadFile(params.opaCAFile)
+		certs, err := os.ReadFile(params.opaCAFile)
 		if err != nil {
 			logrus.Fatalf("Failed to read opa certificate authority file %s", params.opaCAFile)
 		}
