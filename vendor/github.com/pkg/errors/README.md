@@ -16,7 +16,7 @@ which applied recursively up the call stack results in error reports without con
 
 The errors.Wrap function returns a new error that adds context to the original error. For example
 ```go
-_, err := io.ReadAll(r)
+_, err := ioutil.ReadAll(r)
 if err != nil {
         return errors.Wrap(err, "read failed")
 }
@@ -50,7 +50,7 @@ With the upcoming [Go2 error proposals](https://go.googlesource.com/proposal/+/m
 
 ## Contributing
 
-Because of the Go2 errors changes, this package is not accepting proposals for new functionality. With that said, we welcome pull requests, bug fixes and issue reports.
+Because of the Go2 errors changes, this package is not accepting proposals for new functionality. With that said, we welcome pull requests, bug fixes and issue reports. 
 
 Before sending a PR, please discuss your change by raising an issue.
 
