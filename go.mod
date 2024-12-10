@@ -5,9 +5,9 @@ go 1.23
 require (
 	github.com/sirupsen/logrus v1.8.3
 	github.com/spf13/cobra v1.3.0
-	k8s.io/api v0.29.11
-	k8s.io/apimachinery v0.29.11
-	k8s.io/client-go v0.29.11
+	k8s.io/api v0.30.7
+	k8s.io/apimachinery v0.30.7
+	k8s.io/client-go v0.30.7
 )
 
 require (
