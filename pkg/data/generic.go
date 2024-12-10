@@ -181,7 +181,7 @@ type resourceEventQueue struct {
 }
 
 // OnAdd implements ResourceHandler
-func (q resourceEventQueue) OnAdd(obj interface{}) {
+func (q resourceEventQueue) OnAdd(obj interface{}, isInInitialList bool) {
 	key, err := cache.MetaNamespaceKeyFunc(obj)
 	if err != nil {
 		logrus.Warnf("failed to retrieve key: %v", err)
@@ -210,7 +210,7 @@ func (q resourceEventQueue) resourceVersionMatch(oldObj, newObj interface{}) boo
 // OnUpdate implements ResourceHandler
 func (q resourceEventQueue) OnUpdate(oldObj, newObj interface{}) {
 	if !q.resourceVersionMatch(oldObj, newObj) { // Avoid sync flood on relist. We don't use resync.
-		q.OnAdd(newObj)
+		q.OnAdd(newObj, false)
 	}
 }
 
