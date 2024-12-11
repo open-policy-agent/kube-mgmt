@@ -4,3 +4,4 @@ bin
 *.tgz
 tags.json
 .idea
+.vscode/settings.json
