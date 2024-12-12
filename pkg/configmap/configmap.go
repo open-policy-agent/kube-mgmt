@@ -140,20 +140,21 @@ func (s *Sync) Run(namespaces []string) (chan struct{}, error) {
 		if namespace == "*" {
 			namespace = v1.NamespaceAll
 		}
-		source := cache.NewListWatchFromClient(
+		listerWatcher := cache.NewListWatchFromClient(
 			client,
 			"configmaps",
 			namespace,
 			fields.Everything())
-		_, controller := cache.NewInformer(
-			source,
-			&v1.ConfigMap{},
-			0,
-			cache.ResourceEventHandlerFuncs{
+		_, controller := cache.NewInformerWithOptions(cache.InformerOptions{
+			ListerWatcher: listerWatcher,
+			ObjectType:    &v1.ConfigMap{},
+			Handler: cache.ResourceEventHandlerFuncs{
 				AddFunc:    s.add,
 				UpdateFunc: s.update,
 				DeleteFunc: s.delete,
-			})
+			},
+			ResyncPeriod: 0, // Set to 0 as in the original code
+		})
 		go controller.Run(quit)
 	}
 	return quit, nil
