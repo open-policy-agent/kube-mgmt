@@ -41,7 +41,7 @@ type GenericSync struct {
 	client           dynamicClient
 	opa              opa_client.Data
 	ns               types.ResourceType
-	limiter          workqueue.RateLimiter
+	limiter          workqueue.TypedRateLimiter[any]
 	jitterFactor     float64
 	ignoreNamespaces []string
 }
@@ -70,7 +70,7 @@ func NewFromInterface(client dynamic.Interface, opa opa_client.Data, ns types.Re
 		opt(s)
 	}
 	if s.limiter == nil { // Use default rateLimiter if not configured
-		s.limiter = workqueue.NewItemExponentialFailureRateLimiter(backoffMin, backoffMax)
+		s.limiter = workqueue.NewTypedItemExponentialFailureRateLimiter[any](backoffMin, backoffMax)
 	}
 	return s
 }
@@ -85,7 +85,7 @@ func WithIgnoreNamespaces(ignoreNamespaces []string) Option {
 // WithBackoff tunes the values of exponential backoff and jitter factor
 func WithBackoff(min, max time.Duration, jitterFactor float64) Option {
 	return func(s *GenericSync) {
-		s.limiter = workqueue.NewItemExponentialFailureRateLimiter(min, max)
+		s.limiter = workqueue.NewTypedItemExponentialFailureRateLimiter[any](min, max)
 		s.jitterFactor = jitterFactor
 	}
 }
@@ -128,13 +128,13 @@ func (s *GenericSync) RunContext(ctx context.Context) error {
 }
 
 // setup the store and queue for this GenericSync instance
-func (s *GenericSync) setup(ctx context.Context) (cache.Store, workqueue.DelayingInterface) {
+func (s *GenericSync) setup(ctx context.Context) (cache.Store, workqueue.TypedDelayingInterface[any]) {
 	ignoreNs := s.ignoreNs()
 
 	resource := s.client.ResourceFor(s.ns, metav1.NamespaceAll)
 	queue := workqueue.NewNamedDelayingQueue(s.ns.String())
-	store, controller := cache.NewInformer(
-		&cache.ListWatch{
+	store, controller := cache.NewInformerWithOptions(cache.InformerOptions{
+		ListerWatcher: &cache.ListWatch{
 			ListFunc: func(options metav1.ListOptions) (runtime.Object, error) {
 				options.FieldSelector = ignoreNs
 				return resource.List(ctx, options)
@@ -144,10 +144,10 @@ func (s *GenericSync) setup(ctx context.Context) (cache.Store, workqueue.Delayin
 				return resource.Watch(ctx, options)
 			},
 		},
-		&unstructured.Unstructured{},
-		0,
-		resourceEventQueue{queue},
-	)
+		ObjectType:   &unstructured.Unstructured{},
+		Handler:      resourceEventQueue{queue},
+		ResyncPeriod: 0,
+	})
 
 	start, quit := time.Now(), ctx.Done()
 	go controller.Run(quit)
@@ -181,7 +181,7 @@ type resourceEventQueue struct {
 }
 
 // OnAdd implements ResourceHandler
-func (q resourceEventQueue) OnAdd(obj interface{}) {
+func (q resourceEventQueue) OnAdd(obj interface{}, isInInitialList bool) {
 	key, err := cache.MetaNamespaceKeyFunc(obj)
 	if err != nil {
 		logrus.Warnf("failed to retrieve key: %v", err)
@@ -210,7 +210,7 @@ func (q resourceEventQueue) resourceVersionMatch(oldObj, newObj interface{}) boo
 // OnUpdate implements ResourceHandler
 func (q resourceEventQueue) OnUpdate(oldObj, newObj interface{}) {
 	if !q.resourceVersionMatch(oldObj, newObj) { // Avoid sync flood on relist. We don't use resync.
-		q.OnAdd(newObj)
+		q.OnAdd(newObj, false)
 	}
 }
 
@@ -229,7 +229,7 @@ const initPath = ""
 // loop starts replicating Kubernetes resources into OPA. If an error occurs
 // during the replication process, this function will backoff and reload
 // all resources into OPA from scratch.
-func (s *GenericSync) loop(store cache.Store, queue workqueue.DelayingInterface) {
+func (s *GenericSync) loop(store cache.Store, queue workqueue.TypedDelayingInterface[any]) {
 
 	logrus.Infof("Syncing %v.", s.ns)
 	defer func() {
