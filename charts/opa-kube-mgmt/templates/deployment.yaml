@@ -58,17 +58,18 @@ spec:
             TOKEN=`cat /bootstrap/mgmt-token`
             cat > /bootstrap/authz.rego <<EOF
             package system.authz
-            default allow = false
+            import rego.v1
+            default allow := false
             # Allow anonymous access to the default policy decision.
-            allow { input.path = [""]; input.method = "POST" }
-            allow { input.path = [""]; input.method = "GET" }
+            allow if { input.path = [""]; input.method == "POST" }
+            allow if { input.path = [""]; input.method == "GET" }
             # This is only used for health check in liveness and readiness probe
-            allow { input.path = ["health"]; input.method = "GET" }
+            allow if { input.path = ["health"]; input.method == "GET" }
 {{- if .Values.prometheus.enabled }}
             # This allows metrics to be scraped by prometheus
-            allow { input.path = ["metrics"]; input.method = "GET" }
+            allow if { input.path = ["metrics"]; input.method == "GET" }
 {{- end }}
-            allow { input.identity == "$TOKEN" }
+            allow if { input.identity == "$TOKEN" }
             EOF
 {{- end }}
 {{- range $policyName, $policy := .Values.bootstrapPolicies }}
