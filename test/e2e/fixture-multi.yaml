@@ -9,9 +9,10 @@ apiVersion: v1
 data:
   a.rego: |
     package my_pkg
+    import rego.v1
     import data.my_pkg.functions.my_func
     default my_rule := false
-    my_rule {
+    my_rule if {
       my_func(input.hello)
     }
   b.rego: |
@@ -28,8 +29,9 @@ apiVersion: v1
 data:
   f.rego: |
     package my_pkg_fail
+    import rego.v1
     import data.my_pkg_fail.functions.my_func
     default my_rule := false
-    my_rule {
+    my_rule if {
       my_func(input.hello)
     }

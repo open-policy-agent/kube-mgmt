@@ -98,7 +98,7 @@ test-e2e-all: build
   #!/usr/bin/env bash
   set -euo pipefail
 
-  for E in $(find test/e2e/ -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort); do
+  for E in $(find test/e2e/ -mindepth 1 -maxdepth 1 -type d -printf '%f\n'|grep -E -v '^skip_'|sort); do
     echo "===================================================="
     echo "= Running e2e: \`${E}\` "
     echo "===================================================="
