@@ -96,7 +96,7 @@ test-e2e: up test-e2e-sh
 # run all e2e tests
 test-e2e-all: build
   #!/usr/bin/env bash
-  set -euo pipefail
+  set -uo pipefail
 
   for E in $(find test/e2e/ -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort); do
     echo "===================================================="
