@@ -26,6 +26,13 @@ serviceMonitor:
   ## ref: https://github.com/coreos/prometheus-operator/blob/master/Documentation/api.md#prometheusspec
   additionalLabels: {}
 
+# Service configuration
+service:
+  # Annotations to add to the service
+  annotations: {}
+  # Configure trafficDistribution if needed.
+  # trafficDistribution: PreferSameZone
+
 # Annotations in the deployment template
 annotations: {}
 
@@ -293,4 +300,3 @@ extraPorts: []
 #   protocol: TCP
 #   name: http
 #   targetPort: http
-
