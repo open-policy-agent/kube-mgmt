@@ -31,6 +31,21 @@
         "annotations": {"type": "object", "additionalProperties": {"type": "string"}, "default": {}},
         "name": {"type": ["string", "null"], "default": null}
       }
+    },
+    "service": {
+      "type": "object",
+      "properties": {
+        "annotations": {
+          "type": "object",
+          "additionalProperties": {"type": "string"},
+          "default": {}
+        },
+        "trafficDistribution": {
+          "type": ["null","string"],
+          "enum": ["PreferZone", "PreferSameNode", "PreferSameZone", null],
+          "default": null
+        }
+      }
     }
   }
 }

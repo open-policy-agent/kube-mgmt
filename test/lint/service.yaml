@@ -1,0 +1,25 @@
+suite: lint service
+templates:
+  - service.yaml
+tests:
+  - it: service annotations must be a string for foo
+    set:
+      service:
+        annotations:
+          bar: true
+          baz: ["invalid"]
+          foo:
+            bar: baz
+    asserts:
+      - failedTemplate:
+          errorPattern: "Invalid type. Expected: string, given"
+  - it: trafficDistribution invalid value
+    set:
+      service:
+        trafficDistribution: "InvalidValue"
+    asserts:
+      - failedTemplate:
+          errorMessage: |
+            values don't meet the specifications of the schema(s) in the following chart(s):
+            opa-kube-mgmt:
+            - service.trafficDistribution: service.trafficDistribution must be one of the following: "PreferZone", "PreferSameNode", "PreferSameZone", null

@@ -1,0 +1,30 @@
+suite: test service definition
+templates:
+  - service.yaml
+tests:
+  - it: should omit service annotations when null
+    set:
+      service.annotations: null
+    asserts:
+      - notExists:
+          path: metadata.annotations.foo
+  - it: should set service annotations
+    set:
+      service.annotations:
+        foo: bar
+    asserts:
+      - exists:
+          path: metadata.annotations.foo
+      - equal:
+          path: metadata.annotations.foo
+          value: bar
+  - it: should omit trafficDistribution by default
+    asserts:
+      - notExists:
+          path: spec.trafficDistribution
+  - it: should omit trafficDistribution when null
+    set:
+      service.trafficDistribution: null
+    asserts:
+      - notExists:
+          path: spec.trafficDistribution

@@ -4,6 +4,10 @@ metadata:
   name: {{ template "opa.fullname" . }}
   labels:
 {{ include "opa.labels.standard" . | indent 4 }}
+{{- with .Values.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+{{- end }}
 spec:
   selector:
     app: {{ template "opa.fullname" . }}
@@ -18,4 +22,7 @@ spec:
 {{- end }}
 {{- if .Values.extraPorts }}
 {{ toYaml .Values.extraPorts | indent 2}}
+{{- end }}
+{{- if .Values.service.trafficDistribution }}
+  trafficDistribution: {{ .Values.service.trafficDistribution }}
 {{- end }}
