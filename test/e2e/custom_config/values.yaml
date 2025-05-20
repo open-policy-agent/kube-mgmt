@@ -5,5 +5,5 @@ opa:
   bundles:
     quickstart:
       service: controller
-      resource: /bundles/helm-kubernetes-quickstart
+      resource: /external-resources/bundles/helm-kubernetes-quickstart
   default_decision: /helm_kubernetes_quickstart/main
