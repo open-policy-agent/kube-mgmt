@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 
 	opa_client "github.com/open-policy-agent/kube-mgmt/pkg/opa"
@@ -44,6 +45,8 @@ type GenericSync struct {
 	limiter          workqueue.TypedRateLimiter[any]
 	jitterFactor     float64
 	ignoreNamespaces []string
+	mu               sync.Mutex
+	ready            bool
 }
 
 // New returns a new GenericSync that can be started.
@@ -125,6 +128,12 @@ func (s *GenericSync) RunContext(ctx context.Context) error {
 
 	s.loop(store, queue)
 	return nil
+}
+
+func (s *GenericSync) Ready() bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.ready
 }
 
 // setup the store and queue for this GenericSync instance
@@ -271,6 +280,9 @@ func (s *GenericSync) processNext(store cache.Store, path string, syncDone *bool
 		if err := s.syncAll(list); err != nil {
 			return err
 		}
+		s.mu.Lock()
+		s.ready = true
+		s.mu.Unlock()
 		logrus.Infof("Loaded %d resources of kind %v into OPA. Took %v", len(list), s.ns, time.Since(start))
 		*syncDone = true // sync is now Done
 		return nil
