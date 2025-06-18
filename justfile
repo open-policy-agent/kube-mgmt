@@ -90,8 +90,12 @@ test-e2e-sh:
   kubectl delete svc -l kube-mgmt/e2e=true || true
   ./test/e2e/{{E2E_TEST}}/test.sh
 
+# run e2e test before script
+test-e2e-before:
+  ./test/e2e/{{E2E_TEST}}/before.sh || true
+
 # run single e2e test
-test-e2e: up test-e2e-sh
+test-e2e: test-e2e-before up test-e2e-sh
 
 # run all e2e tests
 test-e2e-all: build

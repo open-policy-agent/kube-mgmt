@@ -1,0 +1,42 @@
+useHttps: false
+
+opa: {
+  bundles: {
+    test: {
+      resource: file:///bundle/bundle.tar.gz
+    }
+  }
+}
+
+authz:
+  enabled: false
+
+mgmt:
+  data:
+    enabled: false
+  policies:
+    enabled: false
+  startupProbe:
+    httpGet:
+      scheme: HTTP
+  replicate:
+    ignoreNs:
+      - "ignore-me"
+    auto: true
+  extraArgs:
+    - "--log-level=debug"
+
+rbac:
+  extraRules:
+    - apiGroups: [""]
+      resources: ["services"]
+      verbs: ["*"]
+
+extraVolumes:
+  - name: bundle-vol
+    configMap:
+      name: bundle
+
+extraVolumeMounts:
+  - name: bundle-vol
+    mountPath: /bundle

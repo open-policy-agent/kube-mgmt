@@ -1,6 +1,6 @@
 {{- if and .Values.rbac.create .Values.mgmt.enabled -}}
 {{- $arr := concat .Values.mgmt.replicate.cluster .Values.mgmt.replicate.namespace -}}
-{{- if gt (len $arr) 0 }}
+{{- if or (gt (len $arr) 0) .Values.mgmt.replicate.auto }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
