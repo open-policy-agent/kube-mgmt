@@ -16,9 +16,11 @@ import (
 
 	"github.com/open-policy-agent/kube-mgmt/pkg/configmap"
 	"github.com/open-policy-agent/kube-mgmt/pkg/data"
+	"github.com/open-policy-agent/kube-mgmt/pkg/dynamicdata"
 	"github.com/open-policy-agent/kube-mgmt/pkg/opa"
 	"github.com/open-policy-agent/kube-mgmt/pkg/types"
 	"github.com/open-policy-agent/kube-mgmt/pkg/version"
+	"github.com/open-policy-agent/opa/logging"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"k8s.io/client-go/dynamic"
@@ -41,11 +43,14 @@ type params struct {
 	enablePolicies     bool
 	enableData         bool
 	namespaces         []string
+	opaConfigFile      string
 	replicateCluster   gvkFlag
 	replicateNamespace gvkFlag
 	replicatePath      string
 	logLevel           string
 	replicateIgnoreNs  []string
+	analysisEntrypoint string
+	healthEndpoint     string
 }
 
 func main() {
@@ -93,6 +98,9 @@ func main() {
 	rootCmd.Flags().VarP(&params.replicateCluster, "replicate-cluster", "", "replicate cluster-level resources")
 	rootCmd.Flags().StringVarP(&params.replicatePath, "replicate-path", "", "kubernetes", "set path to replicate data into")
 	rootCmd.Flags().StringSliceVarP(&params.replicateIgnoreNs, "replicate-ignore-namespaces", "", []string{""}, "namespaces that are ignored by replication")
+	rootCmd.Flags().StringVarP(&params.opaConfigFile, "opa-config", "", "", "set file containing OPA configuration for dynamic data replication")
+	rootCmd.Flags().StringVarP(&params.analysisEntrypoint, "analysis-entrypoint", "", "main/main", "set decision to analyze for dynamic data replication configuration")
+	rootCmd.Flags().StringVarP(&params.healthEndpoint, "health-endpoint", "", "", "set health check endpoint listening endpoint (e.g., localhost:8000)")
 
 	rootCmd.PersistentPreRunE = func(cmd *cobra.Command, args []string) error {
 		if rootCmd.Flag("policy-label").Value.String() != "" || rootCmd.Flag("policy-value").Value.String() != "" {
@@ -192,9 +200,8 @@ func run(params *params) {
 		}
 	}
 
-	var client dynamic.Interface
 	if len(params.replicateCluster)+len(params.replicateNamespace) > 0 {
-		client, err = dynamic.NewForConfig(kubeconfig)
+		client, err := dynamic.NewForConfig(kubeconfig)
 		if err != nil {
 			logrus.Fatalf("Failed to get dynamic client: %v", err)
 		}
@@ -213,6 +220,49 @@ func run(params *params) {
 			sync := data.NewFromInterface(client, opa.New(params.opaURL, params.opaAuth).Prefix(params.replicatePath), getResourceType(gvk, true), opts)
 			go sync.RunContext(ctx)
 		}
+	}
+
+	var sync *dynamicdata.Sync
+
+	if params.opaConfigFile != "" {
+		logger := logging.New()
+		switch params.logLevel {
+		case "debug":
+			logger.SetLevel(logging.Debug)
+		case "info":
+			logger.SetLevel(logging.Info)
+		case "error":
+			logger.SetLevel(logging.Error)
+		}
+		sync, err = dynamicdata.New(params.opaConfigFile, params.analysisEntrypoint, params.opaURL, params.opaAuth, params.replicateIgnoreNs, params.replicatePath, kubeconfig, logger)
+		if err != nil {
+			logrus.Fatalf("Failed to create dynamic synchronizer: %v", err)
+		}
+		go sync.Run(context.Background())
+	}
+
+	if params.healthEndpoint != "" {
+		go func() {
+			mux := http.NewServeMux()
+			mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+				if sync == nil || sync.Ready() {
+					logrus.Debugf("health check: READY")
+					w.WriteHeader(http.StatusOK)
+				} else {
+					logrus.Debugf("health check: NOT READY")
+					w.WriteHeader(http.StatusInternalServerError)
+				}
+			})
+			server := &http.Server{
+				Addr:    params.healthEndpoint,
+				Handler: mux,
+			}
+
+			logrus.Infof("Starting health server on %v", params.healthEndpoint)
+			if err := server.ListenAndServe(); err != nil {
+				logrus.Fatalf("Error starting health server: %v", err)
+			}
+		}()
 	}
 
 	quit := make(chan struct{})
