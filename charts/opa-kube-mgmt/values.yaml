@@ -179,6 +179,11 @@ mgmt:
 
     ignoreNs: []
 
+    # Turn on auto-replication. kube-mgmt will apply OPA configuration file
+    # and analyze any configured bundles to determine which Kubernetes
+    # resources to replicate into OPA's in-memory store.
+    auto: false
+
 # Log level for OPA ('debug', 'info', 'error') (app default=info)
 logLevel: info
 

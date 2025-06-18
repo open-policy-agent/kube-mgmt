@@ -201,14 +201,40 @@ spec:
             {{- else }}
             - "--replicate-ignore-namespaces="
             {{- end }}
+            {{- if .Values.mgmt.replicate.auto }}
+            - "--opa-config=/config/config.yaml"
+            - "--health-endpoint=0.0.0.0:8000"
+            {{- end }}
             {{- range .Values.mgmt.extraArgs }}
             - {{ . }}
             {{- end }}
-{{- if or .Values.authz.enabled .Values.bootstrapPolicies }}
           volumeMounts:
+{{- if or .Values.authz.enabled .Values.bootstrapPolicies }}
             - name: bootstrap
               readOnly: true
               mountPath: /bootstrap
+{{- end }}
+{{- if .Values.opa }}
+            - name: config
+              readOnly: true
+              mountPath: /config
+{{- end }}
+{{- if .Values.extraVolumeMounts }}
+{{ toYaml .Values.extraVolumeMounts | indent 12}}
+{{- end }}
+{{- if .Values.mgmt.replicate.auto }}
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 15
 {{- end }}
 {{- end }}
 {{- if .Values.sar.enabled }}
