@@ -20,7 +20,10 @@ import (
 	"github.com/open-policy-agent/kube-mgmt/pkg/opa"
 	"github.com/open-policy-agent/kube-mgmt/pkg/types"
 	"github.com/open-policy-agent/kube-mgmt/pkg/version"
+
+	//lint:ignore SA1019 using OPA v0.x to ensure backwards compatible with pre-1.0 bundles
 	"github.com/open-policy-agent/opa/logging"
+
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"k8s.io/client-go/dynamic"

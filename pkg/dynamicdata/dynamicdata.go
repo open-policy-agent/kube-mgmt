@@ -11,13 +11,28 @@ import (
 	"github.com/open-policy-agent/kube-mgmt/pkg/data"
 	"github.com/open-policy-agent/kube-mgmt/pkg/opa"
 	"github.com/open-policy-agent/kube-mgmt/pkg/types"
+
+	//lint:ignore SA1019 using OPA v0.x to ensure backwards compatible with pre-1.0 bundles
 	"github.com/open-policy-agent/opa/ast"
+
+	//lint:ignore SA1019 using OPA v0.x to ensure backwards compatible with pre-1.0 bundles
 	"github.com/open-policy-agent/opa/dependencies"
+
+	//lint:ignore SA1019 using OPA v0.x to ensure backwards compatible with pre-1.0 bundles
 	"github.com/open-policy-agent/opa/logging"
+
+	//lint:ignore SA1019 using OPA v0.x to ensure backwards compatible with pre-1.0 bundles
 	"github.com/open-policy-agent/opa/plugins"
+
+	//lint:ignore SA1019 using OPA v0.x to ensure backwards compatible with pre-1.0 bundles
 	"github.com/open-policy-agent/opa/sdk"
+
+	//lint:ignore SA1019 using OPA v0.x to ensure backwards compatible with pre-1.0 bundles
 	"github.com/open-policy-agent/opa/storage"
+
+	//lint:ignore SA1019 using OPA v0.x to ensure backwards compatible with pre-1.0 bundles
 	"github.com/open-policy-agent/opa/storage/inmem"
+
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/discovery"
