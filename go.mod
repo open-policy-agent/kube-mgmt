@@ -1,8 +1,6 @@
 module github.com/open-policy-agent/kube-mgmt
 
-go 1.23.8
-
-toolchain go1.24.3
+go 1.24.3
 
 require (
 	github.com/open-policy-agent/opa v1.5.1
