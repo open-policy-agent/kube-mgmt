@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"testing"
 
+	//lint:ignore SA1019 using OPA v0.x to ensure backwards compatible with pre-1.0 bundles
 	sdktest "github.com/open-policy-agent/opa/sdk/test"
+
 	"github.com/open-policy-agent/opa/v1/logging"
 )
 

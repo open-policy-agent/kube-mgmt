@@ -345,7 +345,7 @@ type status struct {
 
 // MarshalJSON implements json.Marshaler
 func (m errList) MarshalJSON() ([]byte, error) {
-	if m == nil || len(m) <= 0 {
+	if len(m) <= 0 {
 		return []byte(`""`), nil
 	}
 	list := make([]json.RawMessage, 0, len(m))
@@ -365,7 +365,7 @@ func (m errList) MarshalJSON() ([]byte, error) {
 
 // Error implements error
 func (m errList) Error() string {
-	if m == nil || len(m) <= 0 {
+	if len(m) <= 0 {
 		return ""
 	}
 	text := make([]string, 0, len(m))
