@@ -101,9 +101,9 @@ func main() {
 	rootCmd.Flags().VarP(&params.replicateCluster, "replicate-cluster", "", "replicate cluster-level resources")
 	rootCmd.Flags().StringVarP(&params.replicatePath, "replicate-path", "", "kubernetes", "set path to replicate data into")
 	rootCmd.Flags().StringSliceVarP(&params.replicateIgnoreNs, "replicate-ignore-namespaces", "", []string{""}, "namespaces that are ignored by replication")
-	rootCmd.Flags().StringVarP(&params.opaConfigFile, "opa-config", "", "", "set file containing OPA configuration for dynamic data replication")
-	rootCmd.Flags().StringVarP(&params.analysisEntrypoint, "analysis-entrypoint", "", "main/main", "set decision to analyze for dynamic data replication configuration")
-	rootCmd.Flags().StringVarP(&params.healthEndpoint, "health-endpoint", "", "", "set health check endpoint listening endpoint (e.g., localhost:8000)")
+	rootCmd.Flags().StringVarP(&params.opaConfigFile, "opa-config", "", "", "set file containing OPA configuration to enable data replication based on configured bundles")
+	rootCmd.Flags().StringVarP(&params.analysisEntrypoint, "analysis-entrypoint", "", "main/main", "set decision to analyze for dynamic data replication configuration (requires --opa-config)")
+	rootCmd.Flags().StringVarP(&params.healthEndpoint, "health-endpoint", "", "", "set health check listening endpoint (e.g., localhost:8000)")
 
 	rootCmd.PersistentPreRunE = func(cmd *cobra.Command, args []string) error {
 		if rootCmd.Flag("policy-label").Value.String() != "" || rootCmd.Flag("policy-value").Value.String() != "" {
