@@ -42,7 +42,7 @@
         },
         "trafficDistribution": {
           "type": ["null","string"],
-          "enum": ["PreferZone", "PreferSameNode", "PreferSameZone", null],
+          "enum": ["PreferClose", "PreferSameNode", "PreferSameZone", null],
           "default": null
         }
       }
