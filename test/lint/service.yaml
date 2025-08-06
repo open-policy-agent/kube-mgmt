@@ -22,4 +22,4 @@ tests:
           errorMessage: |
             values don't meet the specifications of the schema(s) in the following chart(s):
             opa-kube-mgmt:
-            - service.trafficDistribution: service.trafficDistribution must be one of the following: "PreferZone", "PreferSameNode", "PreferSameZone", null
+            - service.trafficDistribution: service.trafficDistribution must be one of the following: "PreferClose", "PreferSameNode", "PreferSameZone", null
