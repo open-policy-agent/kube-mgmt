@@ -46,6 +46,65 @@
           "default": null
         }
       }
+    },
+    "topologySpreadConstraints": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["maxSkew", "topologyKey", "whenUnsatisfiable"],
+        "properties": {
+          "maxSkew": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "topologyKey": {
+            "type": "string",
+            "minLength": 1
+          },
+          "whenUnsatisfiable": {
+            "type": "string",
+            "enum": ["DoNotSchedule", "ScheduleAnyway"]
+          },
+          "labelSelector": {
+            "type": "object",
+            "properties": {
+              "matchLabels": {
+                "type": "object",
+                "additionalProperties": {"type": "string"}
+              },
+              "matchExpressions": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": ["key", "operator"],
+                  "properties": {
+                    "key": {"type": "string"},
+                    "operator": {"type": "string", "enum": ["In", "NotIn", "Exists", "DoesNotExist"]},
+                    "values": {"type": "array", "items": {"type": "string"}}
+                  }
+                }
+              }
+            }
+          },
+          "matchLabelKeys": {
+            "type": "array",
+            "items": {"type": "string"}
+          },
+          "minDomains": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "nodeAffinityPolicy": {
+            "type": "string",
+            "enum": ["Honor", "Ignore"]
+          },
+          "nodeTaintsPolicy": {
+            "type": "string",
+            "enum": ["Honor", "Ignore"]
+          }
+        }
+      },
+      "default": []
     }
   }
 }

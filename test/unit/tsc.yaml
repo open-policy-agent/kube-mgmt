@@ -1,0 +1,173 @@
+suite: test topologySpreadConstraints
+templates:
+  - deployment.yaml
+tests:
+  - it: renders with DoNotSchedule policy
+    set:
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: "kubernetes.io/hostname"
+          whenUnsatisfiable: "DoNotSchedule"
+    asserts:
+      - isKind:
+          of: Deployment
+      - contains:
+          path: spec.template.spec.topologySpreadConstraints
+          content:
+            maxSkew: 1
+            topologyKey: "kubernetes.io/hostname"
+            whenUnsatisfiable: "DoNotSchedule"
+
+  - it: renders multiple topologySpreadConstraints
+    set:
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: "traffic.kubernetes.io/region"
+          whenUnsatisfiable: "ScheduleAnyway"
+        - maxSkew: 2
+          topologyKey: "topology.kubernetes.io/zone"
+          whenUnsatisfiable: "DoNotSchedule"
+    asserts:
+      - lengthEqual:
+          path: spec.template.spec.topologySpreadConstraints
+          count: 2
+      - contains:
+          path: spec.template.spec.topologySpreadConstraints
+          content:
+            topologyKey: "traffic.kubernetes.io/region"
+          any: true
+      - contains:
+          path: spec.template.spec.topologySpreadConstraints
+          content:
+            topologyKey: "topology.kubernetes.io/zone"
+          any: true
+
+  - it: renders with labelSelector
+    set:
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: "kubernetes.io/hostname"
+          whenUnsatisfiable: "DoNotSchedule"
+          labelSelector:
+            matchLabels:
+              app: opa-kube-mgmt
+    asserts:
+      - contains:
+          path: spec.template.spec.topologySpreadConstraints
+          content:
+            maxSkew: 1
+            topologyKey: "kubernetes.io/hostname"
+            whenUnsatisfiable: "DoNotSchedule"
+            labelSelector:
+              matchLabels:
+                app: opa-kube-mgmt
+
+  - it: renders with minDomains
+    set:
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: "kubernetes.io/hostname"
+          whenUnsatisfiable: "DoNotSchedule"
+          minDomains: 3
+    asserts:
+      - contains:
+          path: spec.template.spec.topologySpreadConstraints
+          content:
+            minDomains: 3
+          any: true
+
+  - it: passes through constraint with labelSelector
+    set:
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: "kubernetes.io/hostname"
+          whenUnsatisfiable: "DoNotSchedule"
+          labelSelector:
+            matchLabels:
+              app: opa-kube-mgmt
+            matchExpressions:
+              - key: environment
+                operator: In
+                values:
+                  - production
+                  - staging
+    asserts:
+      - equal:
+          path: spec.template.spec.topologySpreadConstraints[0].labelSelector
+          value:
+            matchLabels:
+              app: opa-kube-mgmt
+            matchExpressions:
+              - key: environment
+                operator: In
+                values:
+                  - production
+                  - staging
+
+  - it: passes through constraint with nodeAffinityPolicy
+    set:
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: "kubernetes.io/hostname"
+          whenUnsatisfiable: "DoNotSchedule"
+          nodeAffinityPolicy: "Honor"
+    asserts:
+      - equal:
+          path: spec.template.spec.topologySpreadConstraints[0].nodeAffinityPolicy
+          value: "Honor"
+
+  - it: passes through constraint with nodeTaintsPolicy
+    set:
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: "kubernetes.io/hostname"
+          whenUnsatisfiable: "DoNotSchedule"
+          nodeTaintsPolicy: "Ignore"
+    asserts:
+      - equal:
+          path: spec.template.spec.topologySpreadConstraints[0].nodeTaintsPolicy
+          value: "Ignore"
+
+  - it: passes through constraint with matchLabelKeys
+    set:
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: "kubernetes.io/hostname"
+          whenUnsatisfiable: "DoNotSchedule"
+          matchLabelKeys:
+            - config
+    asserts:
+      - equal:
+          path: spec.template.spec.topologySpreadConstraints[0].matchLabelKeys
+          value:
+            - config
+
+  - it: passes through fully configured constraint
+    set:
+      topologySpreadConstraints:
+        - maxSkew: 2
+          topologyKey: "topology.kubernetes.io/zone"
+          whenUnsatisfiable: "ScheduleAnyway"
+          minDomains: 3
+          nodeAffinityPolicy: "Honor"
+          nodeTaintsPolicy: "Honor"
+          matchLabelKeys:
+            - pod-template-hash
+          labelSelector:
+            matchLabels:
+              app: opa-kube-mgmt
+    asserts:
+      - equal:
+          path: spec.template.spec.topologySpreadConstraints[0]
+          value:
+            maxSkew: 2
+            topologyKey: "topology.kubernetes.io/zone"
+            whenUnsatisfiable: "ScheduleAnyway"
+            minDomains: 3
+            nodeAffinityPolicy: "Honor"
+            nodeTaintsPolicy: "Honor"
+            matchLabelKeys:
+              - pod-template-hash
+            labelSelector:
+              matchLabels:
+                app: opa-kube-mgmt

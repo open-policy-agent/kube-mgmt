@@ -1,0 +1,79 @@
+suite: lint topologySpreadConstraints
+templates:
+  - deployment.yaml
+tests:
+  - it: fails when maxSkew is missing
+    set:
+      topologySpreadConstraints:
+        - topologyKey: "kubernetes.io/hostname"
+          whenUnsatisfiable: "DoNotSchedule"
+    asserts:
+      - failedTemplate: {}
+
+  - it: fails when maxSkew is null
+    set:
+      topologySpreadConstraints:
+        - maxSkew: null
+          topologyKey: "kubernetes.io/hostname"
+          whenUnsatisfiable: "DoNotSchedule"
+    asserts:
+      - failedTemplate: {}
+
+  - it: fails when topologyKey is missing
+    set:
+      topologySpreadConstraints:
+        - maxSkew: 1
+          whenUnsatisfiable: "DoNotSchedule"
+    asserts:
+      - failedTemplate: {}
+
+  - it: fails when whenUnsatisfiable is missing
+    set:
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: "kubernetes.io/hostname"
+    asserts:
+      - failedTemplate: {}
+
+  - it: fails when maxSkew is not an integer
+    set:
+      topologySpreadConstraints:
+        - maxSkew: "one"
+          topologyKey: "kubernetes.io/hostname"
+          whenUnsatisfiable: "DoNotSchedule"
+    asserts:
+      - failedTemplate: {}
+
+  - it: fails when topologyKey is empty string
+    set:
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: ""
+          whenUnsatisfiable: "DoNotSchedule"
+    asserts:
+      - failedTemplate: {}
+
+  - it: fails when whenUnsatisfiable has invalid value
+    set:
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: "kubernetes.io/hostname"
+          whenUnsatisfiable: "InvalidOption"
+    asserts:
+      - failedTemplate: {}
+
+  - it: renders with empty topologySpreadConstraints array
+    set:
+      topologySpreadConstraints: []
+    asserts:
+      - isKind:
+          of: Deployment
+      - isEmpty:
+          path: spec.template.spec.topologySpreadConstraints
+
+  - it: renders without topologySpreadConstraints when not set
+    asserts:
+      - isKind:
+          of: Deployment
+      - isEmpty:
+          path: spec.template.spec.topologySpreadConstraints
