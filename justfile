@@ -27,7 +27,7 @@ _latest:
   fi
 
 _helm-unittest:
-  helm plugin ls | grep unittest || helm plugin install https://github.com/helm-unittest/helm-unittest --version v0.8.2
+  helm plugin ls | grep unittest || helm plugin install https://github.com/helm-unittest/helm-unittest --version v1.0.3
 
 # golang linter
 lint-go:
