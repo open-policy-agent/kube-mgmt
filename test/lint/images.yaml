@@ -10,7 +10,8 @@ tests:
           errorMessage: |
             values don't meet the specifications of the schema(s) in the following chart(s):
             opa-kube-mgmt:
-            - (root): image is required
+            - at '': missing property 'image'
+
   - it: image.repository not string
     set:
       image:
@@ -20,7 +21,8 @@ tests:
           errorMessage: |
             values don't meet the specifications of the schema(s) in the following chart(s):
             opa-kube-mgmt:
-            - image.repository: Invalid type. Expected: string, given: integer
+            - at '/image/repository': got number, want string
+
   - it: image.tag not string
     set:
       image:
@@ -30,7 +32,8 @@ tests:
           errorMessage: |
             values don't meet the specifications of the schema(s) in the following chart(s):
             opa-kube-mgmt:
-            - image.tag: Invalid type. Expected: string, given: integer
+            - at '/image/tag': got number, want string
+
   - it: mgmt.image is null
     set:
       mgmt:
@@ -40,7 +43,8 @@ tests:
           errorMessage: |
             values don't meet the specifications of the schema(s) in the following chart(s):
             opa-kube-mgmt:
-            - mgmt: image is required
+            - at '/mgmt': missing property 'image'
+
   - it: mgmt.image.repository not string
     set:
       mgmt:
@@ -51,7 +55,8 @@ tests:
           errorMessage: |
             values don't meet the specifications of the schema(s) in the following chart(s):
             opa-kube-mgmt:
-            - mgmt.image.repository: Invalid type. Expected: string, given: integer
+            - at '/mgmt/image/repository': got number, want string
+
   - it: mgmt.image.tag not string
     set:
       mgmt:
@@ -62,4 +67,4 @@ tests:
           errorMessage: |
             values don't meet the specifications of the schema(s) in the following chart(s):
             opa-kube-mgmt:
-            - mgmt.image.tag: Invalid type. Expected: string, given: integer
+            - at '/mgmt/image/tag': got number, want string

@@ -2,17 +2,34 @@ suite: lint service
 templates:
   - service.yaml
 tests:
-  - it: service annotations must be a string for foo
+  - it: fails when service annotation is boolean
     set:
       service:
         annotations:
           bar: true
+    asserts:
+      - failedTemplate:
+          errorPattern: "got boolean, want string"
+
+  - it: fails when service annotation is array
+    set:
+      service:
+        annotations:
           baz: ["invalid"]
+    asserts:
+      - failedTemplate:
+          errorPattern: "got array, want string"
+
+  - it: fails when service annotation is object
+    set:
+      service:
+        annotations:
           foo:
             bar: baz
     asserts:
       - failedTemplate:
-          errorPattern: "Invalid type. Expected: string, given"
+          errorPattern: "got object, want string"
+
   - it: trafficDistribution invalid value
     set:
       service:
@@ -22,4 +39,4 @@ tests:
           errorMessage: |
             values don't meet the specifications of the schema(s) in the following chart(s):
             opa-kube-mgmt:
-            - service.trafficDistribution: service.trafficDistribution must be one of the following: "PreferClose", "PreferSameNode", "PreferSameZone", null
+            - at '/service/trafficDistribution': value must be one of 'PreferClose', 'PreferSameNode', 'PreferSameZone', <nil>
