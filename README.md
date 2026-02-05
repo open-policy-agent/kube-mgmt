@@ -206,8 +206,14 @@ allow {
 * [Go language toolchain](https://go.dev/doc/install).
 * [just](https://github.com/casey/just#just) - generic command runner.
 * [skaffold](https://skaffold.dev/) - build and publish docker images and more, `v2.x` and above is required.
-* [helm](https://helm.sh/docs/intro/install/)- package manager for k8s.
+* [helm](https://helm.sh/docs/intro/install/) - package manager for k8s.
 * [k3d](https://k3d.io/#installation) - local k8s cluster with docker registry.
+* [kubectl](https://kubernetes.io/docs/tasks/tools/) - Kubernetes CLI.
+* [opa](https://www.openpolicyagent.org/docs#running-opa) - Open Policy Agent CLI (for e2e tests).
+* [staticcheck](https://staticcheck.io/docs/getting-started/) - Go static analysis tool (for linting).
+* [httpie](https://httpie.io/docs/cli/installation) - HTTP client (for e2e tests).
+* [jq](https://jqlang.github.io/jq/download/) - JSON processor (for e2e tests).
+* [crane](https://github.com/google/go-containerregistry/blob/main/cmd/crane/doc/crane.md) - Container image tool (optional, for inspecting images).
 
 This project uses `just` for building, testing and running `kube-mgmt` locally.
 It is configured from [justfile](./justfile) in root directory.

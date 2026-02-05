@@ -41,6 +41,9 @@ jobs:
           rename-to: skaffold
           chmod: 0755
       - run: just k3d
+      - uses: open-policy-agent/setup-opa@v2
+        with:
+          version: latest
       - run: pip install httpie
       - run: |
           just test-e2e-all
