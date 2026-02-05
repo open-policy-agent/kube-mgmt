@@ -8,7 +8,7 @@ defaul:
   @just --list
 
 @_skaffold-ctx:
-  skaffold config set default-repo localhost:5000
+  skaffold config set default-repo localhost:5001 --kube-context k3d-kube-mgmt
 
 # build and publish image to release regisry, create chart archive
 build-release:
@@ -62,7 +62,7 @@ rebuild: && build
 
 # build and publish docker to local registry
 build: _skaffold-ctx
-  skaffold build --file-output={{skaffoldTags}} --platform=linux/amd64
+  skaffold build --file-output={{skaffoldTags}} --platform=linux/amd64 --kube-context=k3d-kube-mgmt
 
 # install into local k8s
 up: _skaffold-ctx down
@@ -75,11 +75,11 @@ up: _skaffold-ctx down
   fi
 
   kubectl delete cm -l kube-mgmt/e2e=true || true
-  skaffold deploy --build-artifacts={{skaffoldTags}}
+  skaffold deploy --build-artifacts={{skaffoldTags}} --kube-context=k3d-kube-mgmt
 
 # remove from local k8s
 down:
-  skaffold delete || true
+  skaffold delete --kube-context=k3d-kube-mgmt || true
 
 # run only e2e test script
 test-e2e-sh:
