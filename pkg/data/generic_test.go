@@ -517,7 +517,20 @@ func TestGenericSync(t *testing.T) {
 			t.Parallel()
 			tc.testRetryDelete(t)
 		})
+
+		t.Run(fmt.Sprintf("%s - Must Reload Everything On Forced Resync", tc.Label), func(t *testing.T) {
+			t.Parallel()
+			tc.testForceResync(t, expected)
+		})
 	}
+}
+
+func TestForceResyncBeforeRun(t *testing.T) {
+	t.Parallel()
+
+	// Must be a no-op rather than a panic: the first load happens on Run anyway.
+	sync := NewFromInterface(newFakeDynamicClient(t), &expect.Client{}, types.ResourceType{Resource: "nodes", Version: "v1"})
+	sync.ForceResync()
 }
 
 func TestEventQueue(t *testing.T) {
@@ -721,6 +734,39 @@ func (tc *testCase) testRetryDelete(t *testing.T) {
 	}
 
 	tc.Play(t, client, play)
+}
+
+func (tc *testCase) testForceResync(t *testing.T, expected []byte) {
+
+	client := newFakeDynamicClient(t, tc.Objs...)
+	var sync *GenericSync
+	failures := -1
+	play := expect.Script{
+		// After the initial load, request a resync as if OPA had restarted
+		expect.PutData("/", expected).Do(func() error {
+			sync.ForceResync()
+			return nil
+		}),
+		expect.PutData("/", expected).Do(func() error {
+			failures = sync.limiter.NumRequeues(initPath)
+			return nil
+		}),
+	}
+
+	expect.Play(t, play, func(ctx context.Context, mockClient *expect.Client) {
+		sync = NewFromInterface(
+			client,
+			mockClient.Prefix(tc.Prefix),
+			tc.ResourceType,
+			WithBackoff(0, 5*time.Second, 0),
+		)
+		sync.RunContext(ctx)
+	})
+
+	// A forced resync is not a failure, so it must not count towards the backoff
+	if failures != 0 {
+		t.Fatalf("Forced resync was counted as %d failure(s), want 0", failures)
+	}
 }
 
 func (tc *testCase) testUpdateSameVersion(t *testing.T) {

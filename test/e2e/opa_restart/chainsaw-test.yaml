@@ -1,0 +1,41 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: opa-restart
+spec:
+  namespace: default
+  steps:
+    - name: apply fixtures
+      try:
+        - apply:
+            file: ../fixture.yaml
+      cleanup:
+        - delete:
+            file: ../fixture.yaml
+
+    - name: policies and data are loaded
+      try:
+        - script:
+            content: |
+              hurl --variable token=$OPA_TOKEN --insecure --retry 3 1_state_loaded.hurl
+
+    # Restart only the opa container, like an OOM kill does. Deleting the pod
+    # would restart kube-mgmt as well, which reloads everything on startup.
+    - name: restart opa container
+      try:
+        - script:
+            timeout: 2m
+            content: |
+              set -eu
+              POD=$(kubectl get pod -l app=opa-kube-mgmt --sort-by=.metadata.creationTimestamp -o jsonpath='{.items[-1:].metadata.name}')
+              RESTARTS=$(kubectl get pod "$POD" -o jsonpath='{.status.containerStatuses[?(@.name=="opa")].restartCount}')
+              kubectl debug "$POD" --profile=general --image=busybox:1.37 --target=opa -- kill 1
+              kubectl wait pod "$POD" --timeout=90s \
+                --for=jsonpath='{.status.containerStatuses[?(@.name=="opa")].restartCount}'=$((RESTARTS + 1))
+
+    - name: policies and data are loaded again
+      try:
+        - script:
+            timeout: 2m
+            content: |
+              hurl --variable token=$OPA_TOKEN --insecure --retry 45 --retry-interval 2000 1_state_loaded.hurl

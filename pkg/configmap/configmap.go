@@ -9,9 +9,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"hash/fnv"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/open-policy-agent/kube-mgmt/pkg/opa"
@@ -91,8 +93,14 @@ func matchesNamespace(cm *v1.ConfigMap, namespaces []string) bool {
 type Sync struct {
 	kubeconfig *rest.Config
 	opa        opa.Client
-	clientset  *kubernetes.Clientset
+	clientset  kubernetes.Interface
 	matcher    func(*v1.ConfigMap) (bool, bool)
+
+	// mu is held for reading by the informer event handlers and for writing
+	// by Resync, so Resync never runs concurrently with a handler that applies
+	// a newer version or a deletion of the same ConfigMap.
+	mu     sync.RWMutex
+	stores []cache.Store // one per namespace informer, set by Run
 }
 
 // New returns a new Sync that can be started.
@@ -145,7 +153,7 @@ func (s *Sync) Run(namespaces []string) (chan struct{}, error) {
 			"configmaps",
 			namespace,
 			fields.Everything())
-		_, controller := cache.NewInformerWithOptions(cache.InformerOptions{
+		store, controller := cache.NewInformerWithOptions(cache.InformerOptions{
 			ListerWatcher: listerWatcher,
 			ObjectType:    &v1.ConfigMap{},
 			Handler: cache.ResourceEventHandlerFuncs{
@@ -155,12 +163,49 @@ func (s *Sync) Run(namespaces []string) (chan struct{}, error) {
 			},
 			ResyncPeriod: 0, // Set to 0 as in the original code
 		})
+		s.mu.Lock()
+		s.stores = append(s.stores, store)
+		s.mu.Unlock()
 		go controller.Run(quit)
 	}
 	return quit, nil
 }
 
+// Resync pushes all matching ConfigMaps from the informer caches into OPA
+// again. Intended for use when OPA has restarted and lost its in-memory state.
+func (s *Sync) Resync() {
+	s.mu.RLock()
+	stores := slices.Clone(s.stores)
+	s.mu.RUnlock()
+
+	logrus.Infof("Resyncing all policy and data ConfigMaps into OPA")
+	for _, store := range stores {
+		for _, key := range store.ListKeys() {
+			s.resyncKey(store, key)
+		}
+	}
+}
+
+// resyncKey pushes the current version of one ConfigMap into OPA. The informer
+// updates its cache before it calls the event handlers, so reading the cache
+// under the write lock means that any update or delete this push does not
+// include is applied by its event handler afterwards.
+func (s *Sync) resyncKey(store cache.Store, key string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	obj, exists, err := store.GetByKey(key)
+	if err != nil || !exists {
+		return
+	}
+	cm := obj.(*v1.ConfigMap)
+	if match, isPolicy := s.matcher(cm); match {
+		s.syncAdd(cm, isPolicy)
+	}
+}
+
 func (s *Sync) add(obj interface{}) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	cm := obj.(*v1.ConfigMap)
 	if match, isPolicy := s.matcher(cm); match {
 		logrus.Debugf("OnAdd cm=%v/%v, isPolicy=%v", cm.Namespace, cm.Name, isPolicy)
@@ -169,6 +214,8 @@ func (s *Sync) add(obj interface{}) {
 }
 
 func (s *Sync) update(oldObj, obj interface{}) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	oldCm, cm := oldObj.(*v1.ConfigMap), obj.(*v1.ConfigMap)
 	if match, isPolicy := s.matcher(cm); match {
 		logrus.Debugf("OnUpdate cm=%v/%v, isPolicy=%v, oldVer=%v, newVer=%v",
@@ -190,6 +237,8 @@ func (s *Sync) update(oldObj, obj interface{}) {
 }
 
 func (s *Sync) delete(obj interface{}) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	if d, ok := obj.(cache.DeletedFinalStateUnknown); ok {
 		obj = d.Obj
 	}
@@ -282,6 +331,11 @@ func (s *Sync) setAnnotations(cm *v1.ConfigMap, st status, retries int) {
 	bs, err := json.Marshal(st)
 	if err != nil {
 		logrus.Errorf("Failed to serialize status for cm=%v/%v, err=%v", cm.Namespace, cm.Name, err)
+		return
+	}
+	// Skip the API call if the ConfigMap already has these annotations, e.g.
+	// when Resync pushes ConfigMaps that were loaded successfully before.
+	if cm.Annotations[statusAnnotationKey] == string(bs) && cm.Annotations[retriesAnnotationKey] == strconv.Itoa(retries) {
 		return
 	}
 	patch := map[string]interface{}{

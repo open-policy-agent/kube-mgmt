@@ -47,6 +47,7 @@ type GenericSync struct {
 	ignoreNamespaces []string
 	mu               sync.Mutex
 	ready            bool
+	queue            workqueue.TypedDelayingInterface[any] // protected by mu
 }
 
 // New returns a new GenericSync that can be started.
@@ -142,6 +143,9 @@ func (s *GenericSync) setup(ctx context.Context) (cache.Store, workqueue.TypedDe
 
 	resource := s.client.ResourceFor(s.ns, metav1.NamespaceAll)
 	queue := workqueue.NewNamedDelayingQueue(s.ns.String())
+	s.mu.Lock()
+	s.queue = queue
+	s.mu.Unlock()
 	store, controller := cache.NewInformerWithOptions(cache.InformerOptions{
 		ListerWatcher: &cache.ListWatch{
 			ListFunc: func(options metav1.ListOptions) (runtime.Object, error) {
@@ -233,7 +237,23 @@ func (q resourceEventQueue) OnDelete(obj interface{}) {
 	q.Add(key)
 }
 
-const initPath = ""
+const (
+	initPath  = ""
+	resetPath = "\x00reset" // sentinel used by ForceResync to trigger a full reload
+)
+
+// ForceResync reloads all resources into OPA, as if the sync had just started.
+// Safe to call concurrently. Intended for use when OPA has restarted and lost
+// its in-memory state.
+func (s *GenericSync) ForceResync() {
+	s.mu.Lock()
+	q := s.queue
+	s.mu.Unlock()
+	if q != nil && !q.ShuttingDown() {
+		q.Add(resetPath)
+		logrus.Infof("Queued force resync for %v", s.ns)
+	}
+}
 
 // loop starts replicating Kubernetes resources into OPA. If an error occurs
 // during the replication process, this function will backoff and reload
@@ -270,6 +290,13 @@ func (s *GenericSync) loop(store cache.Store, queue workqueue.TypedDelayingInter
 }
 
 func (s *GenericSync) processNext(store cache.Store, path string, syncDone *bool) error {
+
+	// A forced resync (e.g. OPA restarted) reloads everything, like the
+	// initial load does.
+	if path == resetPath {
+		*syncDone = false
+		path = initPath
+	}
 
 	// On receiving the initPath, load a full dump of the data store
 	if path == initPath {
