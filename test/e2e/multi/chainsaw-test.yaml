@@ -1,0 +1,69 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: multi
+spec:
+  namespace: default
+  steps:
+    - name: initial state is empty
+      try:
+        - script:
+            content: |
+              hurl --retry 3 1_initial_state.hurl
+
+    - name: apply fixtures
+      try:
+        - apply:
+            file: ../fixture-multi.yaml
+      cleanup:
+        - delete:
+            file: ../fixture-multi.yaml
+
+    - name: policies are loaded and evaluated correctly
+      try:
+        - script:
+            content: |
+              hurl --retry 3 2_policies_loaded.hurl
+
+    - name: configmap status annotations are ok
+      try:
+        - assert:
+            resource:
+              apiVersion: v1
+              kind: ConfigMap
+              metadata:
+                name: multi-file-policy
+                annotations:
+                  openpolicyagent.org/kube-mgmt-status: '{"status":"ok"}'
+                  openpolicyagent.org/kube-mgmt-retries: "0"
+        - script:
+            content: |
+              kubectl get cm multi-file-fail-policy -o json \
+                | yq -e '.metadata.annotations["openpolicyagent.org/kube-mgmt-status"] | from_json | .status == "error"'
+              kubectl get cm multi-file-fail-policy -o json \
+                | yq -e '.metadata.annotations["openpolicyagent.org/kube-mgmt-retries"] == "0"'
+
+    - name: remove policy label
+      try:
+        - script:
+            content: |
+              kubectl patch cm multi-file-policy --type=merge \
+                -p '{"metadata":{"labels":{"openpolicyagent.org/policy":""}}}'
+
+    - name: policy is unloaded
+      try:
+        - script:
+            content: |
+              hurl --retry 3 3_policy_unloaded.hurl
+
+    - name: re-add policy label
+      try:
+        - script:
+            content: |
+              kubectl label --overwrite cm multi-file-policy openpolicyagent.org/policy=rego
+
+    - name: policies are reloaded and evaluated correctly
+      try:
+        - script:
+            content: |
+              hurl --retry 3 4_policies_reloaded.hurl

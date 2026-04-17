@@ -1,0 +1,12 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: custom-config
+spec:
+  namespace: default
+  steps:
+    - name: bundle is loaded
+      try:
+        - script:
+            content: |
+              hurl --variable token=$OPA_TOKEN --insecure --retry 15 --retry-interval 2s 1_bundle_loaded.hurl

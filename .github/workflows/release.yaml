@@ -10,35 +10,21 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - uses: actions/setup-go@v6
+      - uses: jetify-com/devbox-install-action@v0.15.0
         with:
-          go-version: "1.24.11"
-      - name: release version
-        run: echo "VERSION=$(echo ${GITHUB_REF##*/})" >> $GITHUB_ENV
-      - uses: jaxxstorm/action-install-gh-release@v1
-        with:
-          repo: GoogleContainerTools/skaffold
-          tag: v2.17.1
-          cache: enable
-          extension-matching: disable
-          rename-to: skaffold
-          chmod: 0755
-      - uses: extractions/setup-just@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - uses: imjasonh/setup-crane@v0.1
-      - uses: docker/login-action@v2
+          enable-cache: true
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v4
         with:
           username: ${{ secrets.DOCKER_USER }}
           password: ${{ secrets.DOCKER_PASSWORD }}
       - name: build and publish image, create chart archive
-        run: |
-          just VERSION=${{ env.VERSION }} build-release
+        run: devbox run -- devspace build --profile release
       - name: upload helm artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: "helm"
-          path: "opa-kube-mgmt-${{ env.VERSION }}.tgz"
+          path: "opa-kube-mgmt-*.tgz"
 
   helm_job:
     runs-on: ubuntu-latest
@@ -48,7 +34,7 @@ jobs:
         with:
           ref: gh-pages
       - name: download helm artifact
-        uses: actions/download-artifact@v4.1.7
+        uses: actions/download-artifact@v8
         id: download
         with:
           name: helm
@@ -58,7 +44,7 @@ jobs:
           helm repo index /tmp/helm --merge ./charts/index.yaml
           mv -f /tmp/helm/* ./charts
       - name: publish index and chart
-        uses: actions-js/push@master
+        uses: actions-js/push@v1.5
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           branch: gh-pages

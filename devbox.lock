@@ -529,54 +529,6 @@
         }
       }
     },
-    "kubernetes-helmPlugins.helm-unittest@1.0.3": {
-      "last_modified": "2026-03-27T11:17:38Z",
-      "resolved": "github:NixOS/nixpkgs/832efc09b4caf6b4569fbf9dc01bec3082a00611#kubernetes-helmPlugins.helm-unittest",
-      "source": "devbox-search",
-      "version": "1.0.3",
-      "systems": {
-        "aarch64-darwin": {
-          "outputs": [
-            {
-              "name": "out",
-              "path": "/nix/store/kyp6xa10x4q3lf36hrsp1sqldmmkyz0h-helm-unittest-1.0.3",
-              "default": true
-            }
-          ],
-          "store_path": "/nix/store/kyp6xa10x4q3lf36hrsp1sqldmmkyz0h-helm-unittest-1.0.3"
-        },
-        "aarch64-linux": {
-          "outputs": [
-            {
-              "name": "out",
-              "path": "/nix/store/f66zwjcpvmfvv4xffb43hf0npirr7pdq-helm-unittest-1.0.3",
-              "default": true
-            }
-          ],
-          "store_path": "/nix/store/f66zwjcpvmfvv4xffb43hf0npirr7pdq-helm-unittest-1.0.3"
-        },
-        "x86_64-darwin": {
-          "outputs": [
-            {
-              "name": "out",
-              "path": "/nix/store/qmivgkrpfq9pkfwy51zv9m8lbi7q5m42-helm-unittest-1.0.3",
-              "default": true
-            }
-          ],
-          "store_path": "/nix/store/qmivgkrpfq9pkfwy51zv9m8lbi7q5m42-helm-unittest-1.0.3"
-        },
-        "x86_64-linux": {
-          "outputs": [
-            {
-              "name": "out",
-              "path": "/nix/store/h0nvjzw8q97v46442hvw3hph28mn0586-helm-unittest-1.0.3",
-              "default": true
-            }
-          ],
-          "store_path": "/nix/store/h0nvjzw8q97v46442hvw3hph28mn0586-helm-unittest-1.0.3"
-        }
-      }
-    },
     "open-policy-agent@1": {
       "last_modified": "2026-04-05T15:42:39Z",
       "resolved": "github:NixOS/nixpkgs/5e11f7acce6c3469bef9df154d78534fa7ae8b6c#open-policy-agent",

@@ -1,5 +1,5 @@
 {{- if .Values.e2e }}
-apiVersion: traefik.containo.us/v1alpha1
+apiVersion: traefik.io/v1alpha1
 kind: IngressRouteTCP
 metadata:
   name: {{ include "opa.fullname" . }}-websecure
@@ -15,7 +15,7 @@ spec:
   tls:
     passthrough: true
 ---
-apiVersion: traefik.containo.us/v1alpha1
+apiVersion: traefik.io/v1alpha1
 kind: IngressRouteTCP
 metadata:
   name: {{ include "opa.fullname" . }}-web
