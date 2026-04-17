@@ -1,9 +1,8 @@
-.git
-charts
-.github
-docs
-examples
-logo
-manifests
-*.md
+# exclude everything, then re-include only what the Go build needs
+*
 
+!go.mod
+!go.sum
+!cmd/
+!pkg/
+!internal/

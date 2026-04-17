@@ -1,0 +1,53 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: labels
+spec:
+  namespace: default
+  steps:
+    - name: initial state is empty
+      try:
+        - script:
+            content: |
+              hurl --retry 3 1_initial_state.hurl
+
+    - name: apply fixtures
+      try:
+        - apply:
+            file: ../fixture-labels.yaml
+      cleanup:
+        - delete:
+            file: ../fixture-labels.yaml
+
+    - name: policy is loaded and evaluated correctly
+      try:
+        - script:
+            content: |
+              hurl --retry 3 2_policy_loaded.hurl
+
+    - name: data is loaded correctly
+      try:
+        - script:
+            content: |
+              hurl 3_data_loaded.hurl
+
+    - name: configmap status annotations are ok
+      try:
+        - assert:
+            resource:
+              apiVersion: v1
+              kind: ConfigMap
+              metadata:
+                labels:
+                  qweqwe/policy: "111"
+                annotations:
+                  openpolicyagent.org/kube-mgmt-status: '{"status":"ok"}'
+        - assert:
+            resource:
+              apiVersion: v1
+              kind: ConfigMap
+              metadata:
+                labels:
+                  asdasd/data: "222"
+                annotations:
+                  openpolicyagent.org/kube-mgmt-status: '{"status":"ok"}'
