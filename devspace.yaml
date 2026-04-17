@@ -1,0 +1,66 @@
+version: v2beta1
+name: kube-mgmt
+
+vars:
+  DEVSPACE_FLAGS: "-n default --no-warn"
+  KO_PLATFORMS: "linux/amd64"
+  KO_EXTRA_TAGS: ""
+
+images:
+  default:
+    image: localhost:5001/openpolicyagent/kube-mgmt
+    tags:
+      - $(git describe --tags --always --dirty)
+    custom:
+      command: |
+        export KO_DOCKER_REPO=${runtime.images.default.image}
+        export KO_VERSION=${runtime.images.default.tag}
+        export KO_COMMIT=${DEVSPACE_GIT_COMMIT}
+        ko build --bare --tags ${KO_VERSION}${KO_EXTRA_TAGS} --platform=${KO_PLATFORMS} ./cmd/kube-mgmt
+
+deployments:
+  default:
+    namespace: default
+    helm:
+      releaseName: ${DEVSPACE_NAME}
+      chart:
+        path: charts/opa-kube-mgmt
+      values:
+        e2e: true
+        mgmt:
+          image:
+            repository: ${runtime.images.default.image}
+            tag: ${runtime.images.default.tag}
+      valuesFiles:
+        - "${E2E_TEST}/values.yaml"
+      upgradeArgs:
+        - "--wait"
+        - "--install"
+
+hooks:
+  - name: "helm package"
+    events: ["after:build:default"]
+    disabled: true
+    command: |
+      helm package charts/opa-kube-mgmt --version ${runtime.images.default.tag} --app-version ${runtime.images.default.tag}
+  - name: "e2e cleanup"
+    events: ["before:deploy:default"]
+    command: |
+      kubectl delete cm -l kube-mgmt/e2e=true -n ${DEVSPACE_NAMESPACE} --ignore-not-found
+      kubectl delete svc -l kube-mgmt/e2e=true -n ${DEVSPACE_NAMESPACE} --ignore-not-found
+
+profiles:
+  - name: release
+    patches:
+      - op: replace
+        path: images.default.image
+        value: openpolicyagent/kube-mgmt
+      - op: replace
+        path: vars.KO_PLATFORMS
+        value: "linux/amd64,linux/arm64"
+      - op: replace
+        path: vars.KO_EXTRA_TAGS
+        value: ",latest"
+      - op: replace
+        path: hooks[0].disabled
+        value: false

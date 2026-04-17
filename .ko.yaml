@@ -1,0 +1,7 @@
+defaultBaseImage: alpine:3.20.8
+builds:
+  - id: kube-mgmt
+    main: ./cmd/kube-mgmt
+    ldflags:
+      - -X github.com/open-policy-agent/kube-mgmt/pkg/version.Version={{.Env.KO_VERSION}}
+      - -X github.com/open-policy-agent/kube-mgmt/pkg/version.Git={{.Env.KO_COMMIT}}

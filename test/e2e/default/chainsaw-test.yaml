@@ -1,0 +1,53 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: default
+spec:
+  namespace: default
+  steps:
+    - name: initial state is empty
+      try:
+        - script:
+            content: |
+              hurl --variable token=$OPA_TOKEN --insecure --retry 3 1_initial_state.hurl
+
+    - name: apply fixtures
+      try:
+        - apply:
+            file: ../fixture.yaml
+      cleanup:
+        - delete:
+            file: ../fixture.yaml
+
+    - name: policy is loaded and evaluated correctly
+      try:
+        - script:
+            content: |
+              hurl --variable token=$OPA_TOKEN --insecure --retry 3 2_policy_loaded.hurl
+
+    - name: data is loaded correctly
+      try:
+        - script:
+            content: |
+              hurl --variable token=$OPA_TOKEN --insecure 3_data_loaded.hurl
+
+    - name: configmap status annotations are ok
+      try:
+        - assert:
+            resource:
+              apiVersion: v1
+              kind: ConfigMap
+              metadata:
+                labels:
+                  openpolicyagent.org/policy: rego
+                annotations:
+                  openpolicyagent.org/kube-mgmt-status: '{"status":"ok"}'
+        - assert:
+            resource:
+              apiVersion: v1
+              kind: ConfigMap
+              metadata:
+                labels:
+                  openpolicyagent.org/data: opa
+                annotations:
+                  openpolicyagent.org/kube-mgmt-status: '{"status":"ok"}'

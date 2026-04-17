@@ -1,0 +1,19 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: replicate-auto
+spec:
+  steps:
+    - name: apply fixtures
+      try:
+        - apply:
+            file: ../fixture-replication.yaml
+      cleanup:
+        - delete:
+            file: ../fixture-replication.yaml
+
+    - name: replication is correct
+      try:
+        - script:
+            content: |
+              hurl --retry 3 1_replication.hurl

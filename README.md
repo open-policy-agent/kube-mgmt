@@ -201,27 +201,95 @@ allow {
 
 ## Development
 
-### Required software
+### Environment setup
 
-* [Go language toolchain](https://go.dev/doc/install).
-* [just](https://github.com/casey/just#just) - generic command runner.
-* [skaffold](https://skaffold.dev/) - build and publish docker images and more, `v2.x` and above is required.
-* [helm](https://helm.sh/docs/intro/install/) - package manager for k8s.
-* [k3d](https://k3d.io/#installation) - local k8s cluster with docker registry.
-* [kubectl](https://kubernetes.io/docs/tasks/tools/) - Kubernetes CLI.
-* [opa](https://www.openpolicyagent.org/docs#running-opa) - Open Policy Agent CLI (for e2e tests).
-* [staticcheck](https://staticcheck.io/docs/getting-started/) - Go static analysis tool (for linting).
-* [httpie](https://httpie.io/docs/cli/installation) - HTTP client (for e2e tests).
-* [jq](https://jqlang.github.io/jq/download/) - JSON processor (for e2e tests).
-* [crane](https://github.com/google/go-containerregistry/blob/main/cmd/crane/doc/crane.md) - Container image tool (optional, for inspecting images).
+This project uses [devbox](https://www.jetify.com/docs/devbox/installing-devbox/) to provide a fully isolated,
+reproducible development environment. All required tools (Go, just, OPA CLI, staticcheck, and others)
+are managed by devbox at pinned versions — no manual installation needed.
 
-This project uses `just` for building, testing and running `kube-mgmt` locally.
-It is configured from [justfile](./justfile) in root directory.
-All available recipes can be inspected by running `just` without arguments.
+To enter the development shell:
+
+```bash
+devbox shell
+```
+
+This project uses `just` as a command runner, configured in [justfile](./justfile).
+Run `just` without arguments to list all available recipes.
+
+### Running the application locally
+
+`kube-mgmt` runs in a local [k3d](https://k3d.io) Kubernetes cluster. Create the cluster once before first use:
+
+```bash
+just all
+```
+
+Start and stop the application with:
+
+```bash
+just up       # build image and deploy kube-mgmt to the local cluster
+just down     # remove the deployment and clean up devspace state
+just down-all # delete the local k8s cluster
+```
+
+### Tests
+
+The project has three categories of tests.
+
+#### Go unit tests
+
+Standard Go tests using the `testing` package:
+
+```bash
+just test-go
+```
+
+#### Helm chart unit tests
+
+Chart rendering tests implemented with the [helm-unittest](https://github.com/helm-unittest/helm-unittest) plugin:
+
+```bash
+just test-helm
+```
+
+#### End-to-end tests
+
+E2E tests deploy `kube-mgmt` to the local k3d cluster via [devspace](https://devspace.sh) and validate behavior using
+[chainsaw](https://kyverno.github.io/chainsaw/) (Kubernetes-native test framework) and [hurl](https://hurl.dev)
+(HTTP assertions). Each scenario is a directory under `test/e2e/`.
+
+Run a single scenario (shows an interactive picker when no argument is given):
+
+```bash
+just test-e2e [test/e2e/<scenario>]
+```
+
+Run all scenarios sequentially:
+
+```bash
+just test-e2e-all
+```
+
+#### Linting
+
+```bash
+just lint
+```
+
+Runs `go vet` and [staticcheck](https://staticcheck.io) for Go code, and helm-unittest lint rules for the Helm chart.
+
+#### Run all checks
+
+```bash
+just test
+```
+
+Runs lint, Go unit tests, and Helm chart unit tests.
 
 ### Release
 
-To release a new version - create [GitHub release](https://github.com/open-policy-agent/kube-mgmt/releases)
-with corresponding tag name that follows [semantic versioning convention](https://semver.org/).
+To release a new version, create a [GitHub release](https://github.com/open-policy-agent/kube-mgmt/releases)
+with a tag that follows the [semantic versioning convention](https://semver.org/).
 
-As soon as tag is pushed - CI pipeline will build and publish artifacts: docker images for supported architectures and helm chart.
+Once the tag is pushed, the CI pipeline automatically builds and publishes all release artifacts:
+Docker images for all supported architectures and the Helm chart.
