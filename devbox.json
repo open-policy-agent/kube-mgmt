@@ -1,0 +1,27 @@
+{
+  "$schema": "https://raw.githubusercontent.com/jetify-com/devbox/0.13.7/.schema/devbox.schema.json",
+  "packages": [
+    "go@1.24",
+    "just@1",
+    "kubectl@1.33",
+    "k3d@5.8",
+    "kubernetes-helm@3",
+    "go-tools@2026",
+    "open-policy-agent@1",
+    "hurl@7",
+    "fzf@0",
+    "devspace@6",
+    "yq-go@4",
+    "oras@1"
+  ],
+  "env": {
+    "GOPATH":                 "$HOME/go/",
+    "PATH":                   "$PATH:$HOME/go/bin"
+  },
+  "shell": {
+    "init_hook": [
+      "command -v chainsaw &>/dev/null || go install github.com/kyverno/chainsaw@v0.2.13",
+      "helm plugin list | grep -q unittest || helm plugin install https://github.com/helm-unittest/helm-unittest --version v1.0.3"
+    ]
+  }
+}
