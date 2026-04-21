@@ -12,11 +12,12 @@
     "fzf@0",
     "devspace@6",
     "yq-go@4",
+    "ko@0",
     "oras@1"
   ],
   "env": {
-    "GOPATH":                 "$HOME/go/",
-    "PATH":                   "$PATH:$HOME/go/bin"
+    "GOPATH": "$HOME/go/",
+    "PATH": "$PATH:$HOME/go/bin"
   },
   "shell": {
     "init_hook": [
