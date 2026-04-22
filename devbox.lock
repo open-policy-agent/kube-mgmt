@@ -530,146 +530,98 @@
       }
     },
     "kubernetes-helm@3": {
-      "last_modified": "2026-03-21T07:29:51Z",
-      "resolved": "github:NixOS/nixpkgs/09061f748ee21f68a089cd5d91ec1859cd93d0be#kubernetes-helm",
+      "last_modified": "2026-04-16T08:46:55Z",
+      "resolved": "github:NixOS/nixpkgs/b86751bc4085f48661017fa226dee99fab6c651b#kubernetes-helm",
       "source": "devbox-search",
-      "version": "3.19.1",
+      "version": "3.20.1",
       "systems": {
         "aarch64-darwin": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/lj80z1b76xig3lfn0s0cmj1lff99jrq3-kubernetes-helm-3.19.1",
+              "path": "/nix/store/9z8g74z70cz08i6aidqlq02b2p59blhs-kubernetes-helm-3.20.1",
               "default": true
             }
           ],
-          "store_path": "/nix/store/lj80z1b76xig3lfn0s0cmj1lff99jrq3-kubernetes-helm-3.19.1"
+          "store_path": "/nix/store/9z8g74z70cz08i6aidqlq02b2p59blhs-kubernetes-helm-3.20.1"
         },
         "aarch64-linux": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/zzzspvhp2sxrcii8g6gi65c78mmc5ifg-kubernetes-helm-3.19.1",
+              "path": "/nix/store/3gadj10ac3078z5klss6fdsbqr1az70h-kubernetes-helm-3.20.1",
               "default": true
             }
           ],
-          "store_path": "/nix/store/zzzspvhp2sxrcii8g6gi65c78mmc5ifg-kubernetes-helm-3.19.1"
+          "store_path": "/nix/store/3gadj10ac3078z5klss6fdsbqr1az70h-kubernetes-helm-3.20.1"
         },
         "x86_64-darwin": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/5wig6vkavjfp1jd3qbx9mbyiiqbfsa75-kubernetes-helm-3.19.1",
+              "path": "/nix/store/5x0z637clda6vpjxijgryn3aayl0nbpa-kubernetes-helm-3.20.1",
               "default": true
             }
           ],
-          "store_path": "/nix/store/5wig6vkavjfp1jd3qbx9mbyiiqbfsa75-kubernetes-helm-3.19.1"
+          "store_path": "/nix/store/5x0z637clda6vpjxijgryn3aayl0nbpa-kubernetes-helm-3.20.1"
         },
         "x86_64-linux": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/6gdpshqw9zx0iz7g6xdkbkxkd5xc6kdd-kubernetes-helm-3.19.1",
+              "path": "/nix/store/852aq3qbnhhdz5vwmfp2p74ky2rli31j-kubernetes-helm-3.20.1",
               "default": true
             }
           ],
-          "store_path": "/nix/store/6gdpshqw9zx0iz7g6xdkbkxkd5xc6kdd-kubernetes-helm-3.19.1"
+          "store_path": "/nix/store/852aq3qbnhhdz5vwmfp2p74ky2rli31j-kubernetes-helm-3.20.1"
         }
       }
     },
     "open-policy-agent@1": {
-      "last_modified": "2026-04-05T15:42:39Z",
-      "resolved": "github:NixOS/nixpkgs/5e11f7acce6c3469bef9df154d78534fa7ae8b6c#open-policy-agent",
+      "last_modified": "2026-04-16T08:46:55Z",
+      "resolved": "github:NixOS/nixpkgs/b86751bc4085f48661017fa226dee99fab6c651b#open-policy-agent",
       "source": "devbox-search",
-      "version": "1.15.1",
+      "version": "1.15.2",
       "systems": {
         "aarch64-darwin": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/vzi0g5syqyl12cdpyalh74n01fla78vr-open-policy-agent-1.15.1",
+              "path": "/nix/store/y6shflbz22p1zabqyl5dz9riw764mbv3-open-policy-agent-1.15.2",
               "default": true
             }
           ],
-          "store_path": "/nix/store/vzi0g5syqyl12cdpyalh74n01fla78vr-open-policy-agent-1.15.1"
+          "store_path": "/nix/store/y6shflbz22p1zabqyl5dz9riw764mbv3-open-policy-agent-1.15.2"
         },
         "aarch64-linux": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/bs5p72zr012im1z0i111wha09c9dry91-open-policy-agent-1.15.1",
+              "path": "/nix/store/0zwqcravk72lf547da7zq7libygydaa5-open-policy-agent-1.15.2",
               "default": true
             }
           ],
-          "store_path": "/nix/store/bs5p72zr012im1z0i111wha09c9dry91-open-policy-agent-1.15.1"
+          "store_path": "/nix/store/0zwqcravk72lf547da7zq7libygydaa5-open-policy-agent-1.15.2"
         },
         "x86_64-darwin": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/7z70hw1bbb1kjpjs9pnzxzfhmbkc0d1f-open-policy-agent-1.15.1",
+              "path": "/nix/store/nd5npbik183azs6lznlrw3wn399gvash-open-policy-agent-1.15.2",
               "default": true
             }
           ],
-          "store_path": "/nix/store/7z70hw1bbb1kjpjs9pnzxzfhmbkc0d1f-open-policy-agent-1.15.1"
+          "store_path": "/nix/store/nd5npbik183azs6lznlrw3wn399gvash-open-policy-agent-1.15.2"
         },
         "x86_64-linux": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/2n1yxkd28hs369pm0k4yd11jsgh5vfaa-open-policy-agent-1.15.1",
+              "path": "/nix/store/aip60z3cqlb3cw9c8gznd1migqrhzmbn-open-policy-agent-1.15.2",
               "default": true
             }
           ],
-          "store_path": "/nix/store/2n1yxkd28hs369pm0k4yd11jsgh5vfaa-open-policy-agent-1.15.1"
-        }
-      }
-    },
-    "oras@1": {
-      "last_modified": "2026-03-21T07:29:51Z",
-      "resolved": "github:NixOS/nixpkgs/09061f748ee21f68a089cd5d91ec1859cd93d0be#oras",
-      "source": "devbox-search",
-      "version": "1.3.0",
-      "systems": {
-        "aarch64-darwin": {
-          "outputs": [
-            {
-              "name": "out",
-              "path": "/nix/store/lyyv71fvbim4aa48cwcj040xr1rnasxc-oras-1.3.0",
-              "default": true
-            }
-          ],
-          "store_path": "/nix/store/lyyv71fvbim4aa48cwcj040xr1rnasxc-oras-1.3.0"
-        },
-        "aarch64-linux": {
-          "outputs": [
-            {
-              "name": "out",
-              "path": "/nix/store/9gmijphg4hzm023k0klx7w4yz54f349q-oras-1.3.0",
-              "default": true
-            }
-          ],
-          "store_path": "/nix/store/9gmijphg4hzm023k0klx7w4yz54f349q-oras-1.3.0"
-        },
-        "x86_64-darwin": {
-          "outputs": [
-            {
-              "name": "out",
-              "path": "/nix/store/68n6iq22hcznjr2m8d980m70g6f86r3d-oras-1.3.0",
-              "default": true
-            }
-          ],
-          "store_path": "/nix/store/68n6iq22hcznjr2m8d980m70g6f86r3d-oras-1.3.0"
-        },
-        "x86_64-linux": {
-          "outputs": [
-            {
-              "name": "out",
-              "path": "/nix/store/g95qqlpjrdxvh34hhcj09yj3r4x5ngns-oras-1.3.0",
-              "default": true
-            }
-          ],
-          "store_path": "/nix/store/g95qqlpjrdxvh34hhcj09yj3r4x5ngns-oras-1.3.0"
+          "store_path": "/nix/store/aip60z3cqlb3cw9c8gznd1migqrhzmbn-open-policy-agent-1.15.2"
         }
       }
     },
