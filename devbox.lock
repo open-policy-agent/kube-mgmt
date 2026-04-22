@@ -625,6 +625,54 @@
         }
       }
     },
+    "oras@1": {
+      "last_modified": "2026-04-16T08:46:55Z",
+      "resolved": "github:NixOS/nixpkgs/b86751bc4085f48661017fa226dee99fab6c651b#oras",
+      "source": "devbox-search",
+      "version": "1.3.0",
+      "systems": {
+        "aarch64-darwin": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/lyyv71fvbim4aa48cwcj040xr1rnasxc-oras-1.3.0",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/lyyv71fvbim4aa48cwcj040xr1rnasxc-oras-1.3.0"
+        },
+        "aarch64-linux": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/9gmijphg4hzm023k0klx7w4yz54f349q-oras-1.3.0",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/9gmijphg4hzm023k0klx7w4yz54f349q-oras-1.3.0"
+        },
+        "x86_64-darwin": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/68n6iq22hcznjr2m8d980m70g6f86r3d-oras-1.3.0",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/68n6iq22hcznjr2m8d980m70g6f86r3d-oras-1.3.0"
+        },
+        "x86_64-linux": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/g95qqlpjrdxvh34hhcj09yj3r4x5ngns-oras-1.3.0",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/g95qqlpjrdxvh34hhcj09yj3r4x5ngns-oras-1.3.0"
+        }
+      }
+    },
     "yq-go@4": {
       "last_modified": "2026-03-27T11:17:38Z",
       "resolved": "github:NixOS/nixpkgs/832efc09b4caf6b4569fbf9dc01bec3082a00611#yq-go",

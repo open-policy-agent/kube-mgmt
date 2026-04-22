@@ -1,5 +1,5 @@
 version: v2beta1
-name: kube-mgmt
+name: opa-kube-mgmt
 
 vars:
   DEVSPACE_FLAGS: "-n default --no-warn"
@@ -24,7 +24,7 @@ deployments:
     helm:
       releaseName: ${DEVSPACE_NAME}
       chart:
-        path: charts/opa-kube-mgmt
+        path: charts/${DEVSPACE_NAME}
       values:
         e2e: true
         mgmt:
@@ -38,11 +38,19 @@ deployments:
         - "--install"
 
 hooks:
-  - name: "helm package"
+  - name: "helm package and copy to ghcr"
     events: ["after:build:default"]
     disabled: true
     command: |
-      helm package charts/opa-kube-mgmt --version ${runtime.images.default.tag} --app-version ${runtime.images.default.tag}
+      helm package charts/${DEVSPACE_NAME} \
+        --version ${runtime.images.default.tag} --app-version ${runtime.images.default.tag}
+      helm push ${DEVSPACE_NAME}-${runtime.images.default.tag}.tgz oci://ghcr.io/open-policy-agent/helm
+  - name: "copy docker image to ghcr"
+    events: ["after:build:default"]
+    disabled: true
+    command: |
+      oras cp docker.io/${runtime.images.default.image}:${runtime.images.default.tag} \
+        ghcr.io/open-policy-agent/docker/${DEVSPACE_NAME}:${runtime.images.default.tag},latest
   - name: "e2e cleanup"
     events: ["before:deploy:default"]
     command: |
@@ -63,4 +71,7 @@ profiles:
         value: ",latest"
       - op: replace
         path: hooks[0].disabled
+        value: false
+      - op: replace
+        path: hooks[1].disabled
         value: false
