@@ -224,12 +224,17 @@ Run `just` without arguments to list all available recipes.
 just all
 ```
 
-Start and stop the application with:
+Start and stop `kube-mgmt` application with:
 
 ```bash
-just up       # build image and deploy kube-mgmt to the local cluster
-just down     # remove the deployment and clean up devspace state
-just down-all # delete the local k8s cluster
+just up
+just down
+```
+
+Delete local k8s cluster
+
+```sh
+just 3d-down
 ```
 
 ### Tests

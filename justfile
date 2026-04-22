@@ -1,15 +1,17 @@
 K3D := "kube-mgmt"
 TEST_RESULTS := 'build/test-results'
 
-defaul:
+@_default:
   @just --list
 
 # golang linter
+[group('code quality')]
 lint-go:
   go vet ./...
   staticcheck ./...
 
 # helm linter
+[group('code quality')]
 lint-helm filter="*":
   #!/usr/bin/env -S bash -euo pipefail
 
@@ -18,10 +20,12 @@ lint-helm filter="*":
   helm unittest -f '../../test/lint/{{filter}}.yaml' \
     --output-file {{TEST_RESULTS}}/helm-unittest/lint.xml --output-type JUnit charts/opa-kube-mgmt
 
-# run all unit tests
+# run all linters
+[group('code quality')]
 lint: lint-go lint-helm
 
 # run helm unit tests
+[group('code quality')]
 test-helm filter="*":
   #!/usr/bin/env -S bash -euo pipefail
 
@@ -31,28 +35,19 @@ test-helm filter="*":
     --output-file {{TEST_RESULTS}}/helm-unittest/unit.xml --output-type JUnit charts/opa-kube-mgmt
 
 # run golang unit tests
+[group('code quality')]
 test-go:
   go test ./...
 
-# run unit tests
+# run linters and unit tests
+[group('code quality')]
 test: lint test-go test-helm
-
-# start kube-mgmt in local k8s cluster
-@up: _ctx
-  devspace deploy --var E2E_TEST=test/e2e/default
-
-# stop kube-mgmt in local k8s cluster
-@down: _ctx
-  devspace purge --force-purge && rm -rf .devspace/
-
-# delete local k8s cluster
-@down-all:
-  k3d cluster delete {{K3D}} || true
 
 @_token:
   kubectl exec deploy/kube-mgmt-opa-kube-mgmt -n default -c mgmt -- cat /bootstrap/mgmt-token
 
 # run e2e test using chainsaw and hurl
+[group('code quality')]
 test-e2e E2E_TEST="": _ctx
   #!/usr/bin/env -S bash -euo pipefail
 
@@ -71,12 +66,23 @@ test-e2e E2E_TEST="": _ctx
     --report-name "$(basename "$SCENARIO")" --report-path {{TEST_RESULTS}}/chainsaw
 
 # run all e2e tests
+[group('code quality')]
 test-e2e-all:
   #!/usr/bin/env -S bash -euo pipefail
 
   for E in $(find test/e2e/ -name 'chainsaw-test.yaml'|xargs -n1 dirname); do
     just test-e2e "${E}"
   done
+
+# start kube-mgmt in local k8s cluster
+[group('deployment')]
+@up: _ctx
+  devspace deploy --var E2E_TEST=test/e2e/default
+
+# stop kube-mgmt in local k8s cluster
+[group('deployment')]
+@down: _ctx
+  devspace purge --force-purge && rm -rf .devspace/
 
 @_ctx:
   kubectl config use-context k3d-{{K3D}}
@@ -88,11 +94,15 @@ _bundle:
   kubectl delete configmap -n default bundle --ignore-not-found
   kubectl create configmap -n default bundle --from-file ./test/e2e/replicate_auto/bundle.tar.gz
 
-# (re) create local cluster
-all: && _ctx _bundle down
-  #!/usr/bin/env -S bash -euo pipefail
-
+# delete local k8s cluster
+[group('deployment')]
+@k3d-down:
   k3d cluster delete {{K3D}} || true
+
+# (re) create local k8s cluster using k3d
+[group('deployment')]
+all: k3d-down && _ctx _bundle
+  #!/usr/bin/env -S bash -euo pipefail
 
   echo '
   apiVersion: k3d.io/v1alpha5
@@ -130,5 +140,5 @@ all: && _ctx _bundle down
 
   kubectl wait --for=create crd/ingressroutetcps.traefik.io --timeout=2m
   sleep 3
-  kubectl wait --for=condition=Established crd/ingressroutetcps.traefik.io --timeout=1s
+  kubectl wait --for=condition=Established crd/ingressroutetcps.traefik.io --timeout=30s
 
