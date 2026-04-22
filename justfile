@@ -44,7 +44,7 @@ test-go:
 test: lint test-go test-helm
 
 @_token:
-  kubectl exec deploy/kube-mgmt-opa-kube-mgmt -n default -c mgmt -- cat /bootstrap/mgmt-token
+  kubectl exec deploy/opa-kube-mgmt -n default -c mgmt -- cat /bootstrap/mgmt-token
 
 # run e2e test using chainsaw and hurl
 [group('code quality')]
@@ -70,7 +70,7 @@ test-e2e E2E_TEST="": _ctx
 test-e2e-all:
   #!/usr/bin/env -S bash -euo pipefail
 
-  for E in $(find test/e2e/ -name 'chainsaw-test.yaml'|xargs -n1 dirname); do
+  for E in $(find test/e2e/ -name 'chainsaw-test.yaml'|xargs -n1 dirname|sort); do
     just test-e2e "${E}"
   done
 

@@ -12,7 +12,8 @@
     "fzf@0",
     "devspace@6",
     "yq-go@4",
-    "ko@0"
+    "ko@0",
+    "oras@1"
   ],
   "env": {
     "GOPATH": "$HOME/go/",

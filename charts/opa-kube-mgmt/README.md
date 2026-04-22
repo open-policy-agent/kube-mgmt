@@ -19,9 +19,11 @@ controller](https://kubernetes.io/docs/reference/access-authn-authz/admission-co
   controller support.
 - Optional, cert-manager (https://docs.cert-manager.io/en/latest/)
 
+### Default Installation
+
 If you just want to see something run, install the chart with default configuration.
 
-```bash
+```sh
 helm repo add opa https://open-policy-agent.github.io/kube-mgmt/charts
 helm repo update
 helm upgrade -i -n opa --create-namespace opa opa/opa-kube-mgmt
@@ -33,9 +35,39 @@ It contains a simple policy that restricts the hostnames that can be specified o
 
 You can download the bundle and inspect it yourself:
 
-```bash
+```sh
 mkdir example && cd example
 curl -s -L https://www.openpolicyagent.org/bundles/kubernetes/admission | tar xzv
+```
+
+### Installation from GitHub Packages (GHCR)
+
+The Helm chart and Docker image are also published to GitHub Container Registry (GHCR).
+
+Install the chart using OCI:
+
+```sh
+helm upgrade -i -n opa --create-namespace opa \
+  oci://ghcr.io/open-policy-agent/helm/opa-kube-mgmt --version <version>
+```
+
+The `kube-mgmt` Docker image is also published to GHCR. To pull it directly:
+
+```sh
+# latest
+docker pull ghcr.io/open-policy-agent/docker/opa-kube-mgmt:latest
+
+# specific version
+docker pull ghcr.io/open-policy-agent/docker/opa-kube-mgmt:<version>
+```
+
+To use the GHCR image when installing the chart:
+
+```sh
+helm upgrade -i -n opa --create-namespace opa \
+  oci://ghcr.io/open-policy-agent/helm/opa-kube-mgmt \
+  --set mgmt.image.repository=ghcr.io/open-policy-agent/docker/opa-kube-mgmt \
+  --set mgmt.image.tag=latest
 ```
 
 ## Configuration

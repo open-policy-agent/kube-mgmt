@@ -35,7 +35,8 @@ jobs:
       - uses: jetify-com/devbox-install-action@v0.15.0
         with:
           enable-cache: true
-      - run: devbox run -- just test
+      - name: lint and unit test
+        run: devbox run -- just test
       - name: publish helm lint report
         uses: mikepenz/action-junit-report@v6
         if: always()
@@ -54,7 +55,8 @@ jobs:
           fail_on_failure: true
           detailed_summary: true
           include_passed: true
-      - run: devbox run -- just all && devbox run -- just test-e2e-all
+      - name: e2e test
+        run: devbox run -- just all && devbox run -- just test-e2e-all
       - name: publish e2e test report
         uses: mikepenz/action-junit-report@v6
         if: always()
