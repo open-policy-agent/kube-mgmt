@@ -1,4 +1,4 @@
-defaultBaseImage: alpine:3.23.4
+defaultBaseImage: alpine:3.23.5
 builds:
   - id: kube-mgmt
     main: ./cmd/kube-mgmt
