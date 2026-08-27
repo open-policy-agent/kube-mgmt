@@ -67,7 +67,6 @@ func TestGenericSync(t *testing.T) {
 					"apiVersion": "v1",
 					"kind": "Node",
 					"metadata":{
-						"creationTimestamp":null,
 						"name":"node1",
 						"resourceVersion":"0"
 					},
@@ -122,7 +121,6 @@ func TestGenericSync(t *testing.T) {
 					"apiVersion": "v1",
 					"kind": "Node",
 					"metadata":{
-						"creationTimestamp":null,
 						"name":"node1",
 						"resourceVersion":"0"
 					},
@@ -201,7 +199,6 @@ func TestGenericSync(t *testing.T) {
 					"apiVersion": "v1",
 					"kind": "Node",
 					"metadata":{
-						"creationTimestamp":null,
 						"name":"node1",
 						"resourceVersion":"0"
 					},
@@ -231,7 +228,6 @@ func TestGenericSync(t *testing.T) {
 					"apiVersion": "v1",
 					"kind": "Node",
 					"metadata":{
-						"creationTimestamp":null,
 						"name":"node2",
 						"resourceVersion":"0"
 					},
@@ -261,7 +257,6 @@ func TestGenericSync(t *testing.T) {
 					"apiVersion": "v1",
 					"kind": "Node",
 					"metadata":{
-						"creationTimestamp":null,
 						"name":"node3",
 						"resourceVersion":"0"
 					},
@@ -318,7 +313,6 @@ func TestGenericSync(t *testing.T) {
 						"apiVersion": "v1",
 						"kind": "Pod",
 						"metadata":{
-							"creationTimestamp":null,
 							"name":"pod1",
 							"namespace":"ns1",
 							"resourceVersion":"0"
@@ -361,7 +355,6 @@ func TestGenericSync(t *testing.T) {
 						"apiVersion": "v1",
 						"kind": "Pod",
 						"metadata":{
-							"creationTimestamp":null,
 							"name":"pod1",
 							"namespace":"ns1",
 							"resourceVersion":"0"
@@ -430,7 +423,6 @@ func TestGenericSync(t *testing.T) {
 						"apiVersion": "v1",
 						"kind": "Pod",
 						"metadata":{
-							"creationTimestamp":null,
 							"name":"pod1",
 							"namespace":"ns1",
 							"resourceVersion":"0"
@@ -445,7 +437,6 @@ func TestGenericSync(t *testing.T) {
 						"apiVersion": "v1",
 						"kind": "Pod",
 						"metadata":{
-							"creationTimestamp":null,
 							"name":"pod2",
 							"namespace":"ns1",
 							"resourceVersion":"0"
@@ -462,7 +453,6 @@ func TestGenericSync(t *testing.T) {
 						"apiVersion": "v1",
 						"kind": "Pod",
 						"metadata":{
-							"creationTimestamp":null,
 							"name":"pod1",
 							"namespace":"ns2",
 							"resourceVersion":"0"
@@ -560,7 +550,6 @@ func TestEventQueue(t *testing.T) {
 					"apiVersion": "v1",
 					"kind": "Node",
 					"metadata":{
-						"creationTimestamp":null,
 						"name":"node1",
 						"resourceVersion":"0"
 					},
