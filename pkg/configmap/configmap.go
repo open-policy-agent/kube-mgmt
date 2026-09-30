@@ -12,6 +12,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/open-policy-agent/kube-mgmt/pkg/opa"
@@ -93,6 +94,8 @@ type Sync struct {
 	opa        opa.Client
 	clientset  *kubernetes.Clientset
 	matcher    func(*v1.ConfigMap) (bool, bool)
+	mu         sync.Mutex
+	stores     []cache.Store // one per namespace watcher, populated by Run()
 }
 
 // New returns a new Sync that can be started.
@@ -145,7 +148,7 @@ func (s *Sync) Run(namespaces []string) (chan struct{}, error) {
 			"configmaps",
 			namespace,
 			fields.Everything())
-		_, controller := cache.NewInformerWithOptions(cache.InformerOptions{
+		store, controller := cache.NewInformerWithOptions(cache.InformerOptions{
 			ListerWatcher: listerWatcher,
 			ObjectType:    &v1.ConfigMap{},
 			Handler: cache.ResourceEventHandlerFuncs{
@@ -155,9 +158,33 @@ func (s *Sync) Run(namespaces []string) (chan struct{}, error) {
 			},
 			ResyncPeriod: 0, // Set to 0 as in the original code
 		})
+		func() {
+			s.mu.Lock()
+			defer s.mu.Unlock()
+			s.stores = append(s.stores, store)
+		}()
 		go controller.Run(quit)
 	}
 	return quit, nil
+}
+
+// Resync re-pushes all matching ConfigMaps from the local informer cache into
+// OPA. Intended for use when OPA has restarted and lost its in-memory state.
+func (s *Sync) Resync() {
+	s.mu.Lock()
+	stores := make([]cache.Store, len(s.stores))
+	copy(stores, s.stores)
+	s.mu.Unlock()
+
+	logrus.Infof("Resyncing all ConfigMaps to OPA")
+	for _, store := range stores {
+		for _, obj := range store.List() {
+			cm := obj.(*v1.ConfigMap)
+			if match, isPolicy := s.matcher(cm); match {
+				s.syncAdd(cm, isPolicy)
+			}
+		}
+	}
 }
 
 func (s *Sync) add(obj interface{}) {
