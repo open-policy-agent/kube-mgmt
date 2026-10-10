@@ -13,6 +13,7 @@ import (
 	"os"
 	"path"
 	"strings"
+	"time"
 
 	"github.com/open-policy-agent/kube-mgmt/pkg/configmap"
 	"github.com/open-policy-agent/kube-mgmt/pkg/data"
@@ -54,6 +55,7 @@ type params struct {
 	replicateIgnoreNs  []string
 	analysisEntrypoint string
 	healthEndpoint     string
+	opaResyncInterval  time.Duration
 }
 
 func main() {
@@ -104,6 +106,7 @@ func main() {
 	rootCmd.Flags().StringVarP(&params.opaConfigFile, "opa-config", "", "", "set file containing OPA configuration to enable data replication based on configured bundles")
 	rootCmd.Flags().StringVarP(&params.analysisEntrypoint, "analysis-entrypoint", "", "main/main", "set decision to analyze for dynamic data replication configuration (requires --opa-config)")
 	rootCmd.Flags().StringVarP(&params.healthEndpoint, "health-endpoint", "", "", "set health check listening endpoint (e.g., localhost:8000)")
+	rootCmd.Flags().DurationVarP(&params.opaResyncInterval, "opa-resync-interval", "", 15*time.Second, "how often to check OPA health and resync all data if OPA restarted (0 to disable)")
 
 	rootCmd.PersistentPreRunE = func(cmd *cobra.Command, args []string) error {
 		if rootCmd.Flag("policy-label").Value.String() != "" || rootCmd.Flag("policy-value").Value.String() != "" {
@@ -183,8 +186,9 @@ func run(params *params) {
 		http.DefaultTransport.(*http.Transport).TLSClientConfig = config
 	}
 
+	var cmSync *configmap.Sync
 	if params.enablePolicies || params.enableData {
-		sync := configmap.New(
+		cmSync = configmap.New(
 			kubeconfig,
 			opa.New(params.opaURL, params.opaAuth),
 			configmap.DefaultConfigMapMatcher(
@@ -197,31 +201,34 @@ func run(params *params) {
 				params.dataValue,
 			),
 		)
-		_, err = sync.Run(params.namespaces)
+		_, err = cmSync.Run(params.namespaces)
 		if err != nil {
 			logrus.Fatalf("Failed to start configmap sync: %v", err)
 		}
 	}
 
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	var genericSyncs []*data.GenericSync
 	if len(params.replicateCluster)+len(params.replicateNamespace) > 0 {
 		client, err := dynamic.NewForConfig(kubeconfig)
 		if err != nil {
 			logrus.Fatalf("Failed to get dynamic client: %v", err)
 		}
 
-		ctx, cancel := context.WithCancel(context.Background())
-		defer cancel()
-
 		opts := data.WithIgnoreNamespaces(params.replicateIgnoreNs)
 
 		for _, gvk := range params.replicateCluster {
-			sync := data.NewFromInterface(client, opa.New(params.opaURL, params.opaAuth).Prefix(params.replicatePath), getResourceType(gvk, false), opts)
-			go sync.RunContext(ctx)
+			s := data.NewFromInterface(client, opa.New(params.opaURL, params.opaAuth).Prefix(params.replicatePath), getResourceType(gvk, false), opts)
+			genericSyncs = append(genericSyncs, s)
+			go s.RunContext(ctx)
 		}
 
 		for _, gvk := range params.replicateNamespace {
-			sync := data.NewFromInterface(client, opa.New(params.opaURL, params.opaAuth).Prefix(params.replicatePath), getResourceType(gvk, true), opts)
-			go sync.RunContext(ctx)
+			s := data.NewFromInterface(client, opa.New(params.opaURL, params.opaAuth).Prefix(params.replicatePath), getResourceType(gvk, true), opts)
+			genericSyncs = append(genericSyncs, s)
+			go s.RunContext(ctx)
 		}
 	}
 
@@ -241,7 +248,12 @@ func run(params *params) {
 		if err != nil {
 			logrus.Fatalf("Failed to create dynamic synchronizer: %v", err)
 		}
-		go sync.Run(context.Background())
+		go sync.Run(ctx)
+	}
+
+	if params.opaResyncInterval > 0 {
+		healthURL := strings.TrimSuffix(params.opaURL, "/v1") + "/health"
+		go watchOPAHealth(ctx, healthURL, params.opaResyncInterval, cmSync, genericSyncs)
 	}
 
 	if params.healthEndpoint != "" {
@@ -270,6 +282,43 @@ func run(params *params) {
 
 	quit := make(chan struct{})
 	<-quit
+}
+
+// watchOPAHealth polls OPA's /health endpoint and triggers a full re-sync of
+// all sync subsystems whenever OPA recovers after being unreachable. This
+// handles the case where the OPA container restarts (e.g. due to OOM) while
+// kube-mgmt is idle and would not otherwise detect the data loss.
+func watchOPAHealth(ctx context.Context, healthURL string, interval time.Duration, cmSync *configmap.Sync, genericSyncs []*data.GenericSync) {
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+	wasDown := false
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			resp, err := http.Get(healthURL) //nolint:noctx // intentional fire-and-forget health probe
+			up := err == nil && resp != nil && resp.StatusCode == http.StatusOK
+			if resp != nil {
+				resp.Body.Close()
+			}
+			if !up {
+				if !wasDown {
+					logrus.Warnf("OPA health check failed (%v), will resync on recovery", healthURL)
+				}
+				wasDown = true
+			} else if wasDown {
+				logrus.Infof("OPA recovered, triggering full resync")
+				if cmSync != nil {
+					cmSync.Resync()
+				}
+				for _, s := range genericSyncs {
+					s.ForceResync()
+				}
+				wasDown = false
+			}
+		}
+	}
 }
 
 func loadRESTConfig(path string) (*rest.Config, error) {
