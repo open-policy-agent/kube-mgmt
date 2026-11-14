@@ -12,6 +12,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/open-policy-agent/kube-mgmt/pkg/opa"
@@ -40,6 +41,7 @@ const (
 	resyncPeriod        = time.Second * 60
 	syncResetBackoffMin = time.Second
 	syncResetBackoffMax = time.Second * 30
+	retryBackoffMin     = time.Second
 )
 
 // Label validator
@@ -91,8 +93,24 @@ func matchesNamespace(cm *v1.ConfigMap, namespaces []string) bool {
 type Sync struct {
 	kubeconfig *rest.Config
 	opa        opa.Client
-	clientset  *kubernetes.Clientset
+	clientset  kubernetes.Interface
 	matcher    func(*v1.ConfigMap) (bool, bool)
+
+	// retries tracks failed policy loads of this instance, keyed by
+	// namespace/name. It is kept in memory rather than derived from the
+	// retries annotation, because the annotation is shared by all kube-mgmt
+	// instances watching the same ConfigMap and would let one instance
+	// cancel the retries of another (see issue #194).
+	mu         sync.Mutex
+	retries    map[string]retryState
+	retryAfter func(time.Duration, func())
+}
+
+// retryState records a failed policy ConfigMap and its remaining retries.
+type retryState struct {
+	cm   *v1.ConfigMap
+	fp   uint64
+	left int
 }
 
 // New returns a new Sync that can be started.
@@ -119,6 +137,8 @@ func New(kubeconfig *rest.Config, opa opa.Client, matcher func(*v1.ConfigMap) (b
 		kubeconfig: &cpy,
 		opa:        opa,
 		matcher:    matcher,
+		retries:    map[string]retryState{},
+		retryAfter: func(d time.Duration, f func()) { time.AfterFunc(d, f) },
 	}
 }
 
@@ -174,16 +194,18 @@ func (s *Sync) update(oldObj, obj interface{}) {
 		logrus.Debugf("OnUpdate cm=%v/%v, isPolicy=%v, oldVer=%v, newVer=%v",
 			cm.Namespace, cm.Name, isPolicy, oldCm.GetResourceVersion(), cm.GetResourceVersion())
 		if cm.GetResourceVersion() != oldCm.GetResourceVersion() {
+			// Annotation-only updates (e.g. status written by this or another
+			// kube-mgmt instance) are ignored; retries are scheduled locally.
 			newFp, oldFp := fingerprint(cm), fingerprint(oldCm)
-			rtrVal := cm.Annotations[retriesAnnotationKey]
-			logrus.Debugf("OnUpdate cm=%v/%v, retries=%v, oldFp=%v, newFp=%v", cm.Namespace, cm.Name, rtrVal, oldFp, newFp)
-			if newFp != oldFp || rtrVal != "0" {
+			logrus.Debugf("OnUpdate cm=%v/%v, oldFp=%v, newFp=%v", cm.Namespace, cm.Name, oldFp, newFp)
+			if newFp != oldFp {
 				s.syncAdd(cm, isPolicy)
 			}
 		}
 	} else {
 		// check if the label was removed
 		if match, isPolicy := s.matcher(oldCm); match {
+			s.clearRetries(oldCm)
 			s.syncRemove(oldCm, isPolicy)
 		}
 	}
@@ -196,6 +218,7 @@ func (s *Sync) delete(obj interface{}) {
 	cm := obj.(*v1.ConfigMap)
 	if match, isPolicy := s.matcher(cm); match {
 		logrus.Debugf("OnDelete cm=%v/%v", cm.Namespace, cm.Name)
+		s.clearRetries(cm)
 		s.syncRemove(cm, isPolicy)
 	}
 }
@@ -235,29 +258,77 @@ func (s *Sync) syncAdd(cm *v1.ConfigMap, isPolicy bool) {
 	if syncErr != nil {
 		var retries int = 0
 		if isPolicy {
-			if rStr, ok := cm.Annotations[retriesAnnotationKey]; ok {
-				r, err := strconv.Atoi(rStr)
-				if err == nil && r > 0 {
-					retries = r - 1
-					logrus.Debugf("Adding policies error cm=%v, old retry=%v, new retry=%v", path, rStr, retries)
-				} else if err == nil && r == 0 {
-					retries = defaultRetries
-					logrus.Debugf("Adding policies error cm=%v, old retry=%v, new retry=%v", path, rStr, retries)
-				}
-			} else {
-				retries = defaultRetries
-				logrus.Debugf("Adding policies error cm=%v, no retry annotation, new retry=%v", path, retries)
-			}
+			retries = s.scheduleRetry(cm)
 		}
 		s.setAnnotations(cm, status{
 			Status: "error",
 			Error:  syncErr,
 		}, retries)
 	} else {
+		s.clearRetries(cm)
 		s.setAnnotations(cm, status{
 			Status: "ok",
 		}, 0)
+		// Failed policies may depend on what was just loaded.
+		s.retryFailed()
 	}
+}
+
+// scheduleRetry records a failed policy load of cm and, if retries are left,
+// schedules another attempt with backoff. Failed policies are also retried
+// whenever another ConfigMap loads successfully, see retryFailed. It returns
+// the retries left before this attempt, as reported in the retries annotation.
+func (s *Sync) scheduleRetry(cm *v1.ConfigMap) int {
+	key := cm.Namespace + "/" + cm.Name
+	fp := fingerprint(cm)
+
+	s.mu.Lock()
+	st, ok := s.retries[key]
+	if !ok || st.fp != fp {
+		st = retryState{cm: cm, fp: fp, left: defaultRetries}
+	}
+	left := st.left
+	if st.left > 0 {
+		st.left--
+	}
+	s.retries[key] = st
+	s.mu.Unlock()
+
+	if left == 0 {
+		logrus.Debugf("Adding policies error cm=%v, no retries left", key)
+		return 0
+	}
+	delay := retryBackoffMin << (defaultRetries - left)
+	logrus.Debugf("Adding policies error cm=%v, retries left=%v, next retry in %v", key, left, delay)
+	s.retryAfter(delay, func() { s.retry(key, fp) })
+	return left
+}
+
+// retryFailed schedules an immediate retry of every failed policy.
+func (s *Sync) retryFailed() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for key, st := range s.retries {
+		s.retryAfter(0, func() { s.retry(key, st.fp) })
+	}
+}
+
+// retry syncs a failed policy again, unless it was changed or removed in the
+// meantime, in which case the informer handles it.
+func (s *Sync) retry(key string, fp uint64) {
+	s.mu.Lock()
+	st, ok := s.retries[key]
+	s.mu.Unlock()
+	if !ok || st.fp != fp {
+		return
+	}
+	s.syncAdd(st.cm, true)
+}
+
+func (s *Sync) clearRetries(cm *v1.ConfigMap) {
+	s.mu.Lock()
+	delete(s.retries, cm.Namespace+"/"+cm.Name)
+	s.mu.Unlock()
 }
 
 func (s *Sync) syncRemove(cm *v1.ConfigMap, isPolicy bool) {
