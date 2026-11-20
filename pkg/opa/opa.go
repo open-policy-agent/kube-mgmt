@@ -6,11 +6,15 @@ package opa
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"strings"
+	"time"
+
+	"github.com/sirupsen/logrus"
 )
 
 // Error contains the standard error fields returned by OPA.
@@ -60,6 +64,10 @@ type Data interface {
 
 // New returns a new Client object.
 func New(url string, auth string) Client {
+	return newHTTPClient(url, auth)
+}
+
+func newHTTPClient(url, auth string) *httpClient {
 	return &httpClient{strings.TrimRight(url, "/"), "", auth}
 }
 
@@ -180,9 +188,96 @@ func (c *httpClient) handleErrors(resp *http.Response) error {
 	return &err
 }
 
+// InstanceID returns the ID that OPA generates each time it starts (labels.id
+// in its active configuration). A different ID means that OPA has restarted and
+// lost all policies and data that were pushed to it.
+func InstanceID(ctx context.Context, url, auth string) (string, error) {
+	c := newHTTPClient(url, auth)
+	resp, err := c.doContext(ctx, "GET", slashPath("config"), nil)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("GET %v%v: unexpected status %v", c.url, slashPath("config"), resp.Status)
+	}
+	var config struct {
+		Result struct {
+			Labels struct {
+				ID string `json:"id"`
+			} `json:"labels"`
+		} `json:"result"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&config); err != nil {
+		return "", fmt.Errorf("failed to decode OPA config: %w", err)
+	}
+	if config.Result.Labels.ID == "" {
+		return "", fmt.Errorf("OPA config has no labels.id")
+	}
+	return config.Result.Labels.ID, nil
+}
+
+// maxRestartCheckTimeout caps how long a single restart check may take.
+const maxRestartCheckTimeout = 5 * time.Second
+
+// WatchRestarts checks OPA's instance ID every interval until ctx is done and
+// calls resync after OPA restarts. It also calls resync when OPA is unreachable
+// on the first check and becomes reachable later, because anything pushed to
+// OPA before it was ready may have failed.
+func WatchRestarts(ctx context.Context, url, auth string, interval time.Duration, resync func()) {
+	watchRestarts(ctx, interval, func(ctx context.Context) (string, error) {
+		return InstanceID(ctx, url, auth)
+	}, resync)
+}
+
+func watchRestarts(ctx context.Context, interval time.Duration, instanceID func(context.Context) (string, error), resync func()) {
+	if interval <= 0 {
+		return
+	}
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+
+	var lastID string
+	failing := false
+	for {
+		checkCtx, cancel := context.WithTimeout(ctx, min(interval, maxRestartCheckTimeout))
+		id, err := instanceID(checkCtx)
+		cancel()
+
+		if err != nil {
+			if !failing && ctx.Err() == nil {
+				logrus.Warnf("Failed to check whether OPA restarted, will resync once the check succeeds: %v", err)
+			}
+			failing = true
+		} else {
+			switch {
+			case lastID != "" && id != lastID:
+				logrus.Infof("OPA restarted (instance ID changed from %v to %v), resyncing all policies and data", lastID, id)
+				resync()
+			case lastID == "" && failing:
+				logrus.Infof("OPA is reachable, resyncing all policies and data")
+				resync()
+			case failing:
+				logrus.Infof("OPA is reachable again and did not restart")
+			}
+			lastID, failing = id, false
+		}
+
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+		}
+	}
+}
+
 func (c *httpClient) do(verb, path string, body io.Reader) (*http.Response, error) {
+	return c.doContext(context.Background(), verb, path, body)
+}
+
+func (c *httpClient) doContext(ctx context.Context, verb, path string, body io.Reader) (*http.Response, error) {
 	url := c.url + path
-	req, err := http.NewRequest(verb, url, body)
+	req, err := http.NewRequestWithContext(ctx, verb, url, body)
 	if err != nil {
 		return nil, err
 	}

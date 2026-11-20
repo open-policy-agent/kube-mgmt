@@ -1,0 +1,12 @@
+mgmt:
+  replicate:
+    namespace:
+      - v1/services
+  extraArgs:
+    - "--opa-resync-interval=2s"
+
+rbac:
+  extraRules:
+    - apiGroups: [""]
+      resources: ["services"]
+      verbs: ["get", "list", "watch"]

@@ -116,6 +116,16 @@ func (s *Sync) Ready() bool {
 	return true
 }
 
+// ForceResync reloads the data of every running replicator into OPA. Intended
+// for use when OPA has restarted and lost its in-memory state.
+func (s *Sync) ForceResync() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for _, r := range s.running {
+		r.sync.ForceResync()
+	}
+}
+
 func (s *Sync) loop(ctx context.Context, a *analyzer, rts map[string]types.ResourceType, client *dynamic.DynamicClient) {
 	for {
 		s.logger.Debug("Sync waiting for analysis result")
